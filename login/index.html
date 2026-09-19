@@ -159,15 +159,15 @@ table{width:100%;border-collapse:collapse;font-size:13px}
 th{text-align:left;padding:11px 10px;font-size:11px;letter-spacing:1.5px;color:var(--muted);border-bottom:1px solid var(--border);font-family:'Monument Extended',sans-serif;font-weight:700;position:sticky;top:0;background:var(--surf);white-space:nowrap}
 td{padding:11px 10px;border-bottom:1px solid var(--border);color:#ccc}
 tr:hover td{background:var(--surf2)}
-.badge{display:inline-flex;align-items:center;padding:3px 8px;border-radius:3px;font-size:11px;font-weight:700;letter-spacing:.5px;font-family:'Monument Extended',sans-serif;white-space:nowrap}
+.badge{display:inline-flex;align-items:center;padding:3px 8px;border-radius:3px;font-size:11px;font-weight:400;letter-spacing:.5px;font-family:'Monument Extended',sans-serif;white-space:nowrap}
 .badge-green{background:var(--green-bg);color:var(--green);border:1px solid rgba(0,230,118,.2)}
 .badge-red{background:var(--red-bg);color:var(--red);border:1px solid rgba(255,68,68,.2)}
 .badge-blue{background:var(--blue-bg);color:var(--blue);border:1px solid rgba(79,195,247,.2)}
 .badge-orange{background:var(--orange-bg);color:var(--orange);border:1px solid rgba(255,98,11,.2)}
 .badge-gray{background:var(--surf3);color:var(--muted);border:1px solid var(--border2)}
-.val-pos{color:var(--green);font-weight:600}
-.val-neg{color:var(--red);font-weight:600}
-.val-neu{color:var(--blue);font-weight:600}
+.val-pos{color:var(--green);font-weight:400}
+.val-neg{color:var(--red);font-weight:400}
+.val-neu{color:var(--blue);font-weight:400}
 .btn-icon{background:none;border:none;cursor:pointer;padding:3px 5px;border-radius:3px;transition:all .15s;color:var(--muted);display:inline-flex;align-items:center}
 .btn-icon:hover.edit{color:var(--blue);background:var(--blue-bg)}
 .btn-icon:hover.del{color:var(--red);background:var(--red-bg)}
@@ -185,9 +185,9 @@ th button svg{width:9px;height:9px;stroke:currentColor;fill:none;stroke-width:2}
 /* DRE */
 .dre-wrap{overflow-x:auto}
 .dre-table{min-width:1000px}
-.dre-table td,.dre-table th{text-align:right;padding:10px 12px;font-family:'Monument Extended',sans-serif;font-weight:300;font-size:12px}
+.dre-table td,.dre-table th{text-align:right;padding:9px 6px;font-family:'Monument Extended',sans-serif;font-weight:300;font-size:11px;white-space:nowrap}
 .dre-table td:first-child,.dre-table th:first-child{text-align:left;min-width:180px;font-size:13px}
-.dre-table tr.section td{font-weight:500;font-size:13px;background:var(--surf2)}
+.dre-table tr.section td{font-weight:500;font-size:12px;background:var(--surf2)}
 .dre-table tr:hover td{background:var(--surf2)}
 
 /* MODAL */
@@ -1748,13 +1748,14 @@ function renderAnual(){
   return `<div class="tab-content"><div class="dre-wrap"><div class="section-card" style="padding:0">
     <div style="padding:14px 16px;border-bottom:1px solid var(--border)">
       <span style="font-size:13px;letter-spacing:2px;color:var(--muted);font-family:'Barlow Condensed',sans-serif;font-weight:700">DRE — RESULTADO ANUAL ${currentYear}</span>
+      <span style="font-size:10px;color:var(--muted2);margin-left:8px">(valores em R$)</span>
     </div>
     <div style="overflow-x:auto">
       <table class="dre-table">
         <thead><tr>
           <th style="text-align:left;padding:8px;min-width:160px;font-size:11px;letter-spacing:1.5px;color:var(--muted)">CATEGORIA</th>
-          ${MESES_SHORT.map(m=>`<th style="font-size:9px;letter-spacing:1px;color:var(--muted);min-width:72px">${m.toUpperCase()}</th>`).join('')}
-          <th style="color:var(--orange);font-size:9px;letter-spacing:1px;min-width:88px">TOTAL</th>
+          ${MESES_SHORT.map(m=>`<th style="font-size:9px;letter-spacing:1px;color:var(--muted);min-width:52px">${m.toUpperCase()}</th>`).join('')}
+          <th style="color:var(--orange);font-size:9px;letter-spacing:1px;min-width:80px">TOTAL</th>
         </tr></thead>
         <tbody>
           ${rows.map(row=>{
@@ -1763,10 +1764,10 @@ function renderAnual(){
               <td style="${row.sec?`font-weight:500;font-size:13px;${row.c?'color:'+row.c:''}`:''}">${row.l}</td>
               ${annSums.map(s=>{
                 const v=getV(s,row.k);
-                const disp=row.pct?fmtPct(v):(v!==0?(row.k==='lucro'&&v>0?'+':'')+fmtK(v):'—');
+                const disp=row.pct?fmtPct(v):(v!==0?(row.k==='lucro'&&v>0?'+':'')+fmtK(v).replace('R$\u00a0',''):'—');
                 return `<td style="${cellColor(row,v)}">${disp}</td>`;
               }).join('')}
-              <td style="${cellColor(row,totalV)};font-weight:400;font-size:14px">${row.pct?fmtPct(totalV):(row.k==='lucro'&&totalV>0?'+':'')+fmtK(totalV)}</td>
+              <td style="${cellColor(row,totalV)};font-weight:400;font-size:13px">${row.pct?fmtPct(totalV):(row.k==='lucro'&&totalV>0?'+':'')+fmtK(totalV).replace('R$\u00a0','')}</td>
             </tr>`;
           }).join('')}
         </tbody>

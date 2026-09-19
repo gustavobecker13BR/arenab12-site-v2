@@ -154,7 +154,7 @@ input:focus,select:focus{border-color:var(--orange)}
 .preview-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:gap;gap:8px}
 .preview-label{font-size:11px;letter-spacing:2px;color:var(--muted);font-family:'Monument Extended',sans-serif;font-weight:400}
 .preview-actions{display:flex;gap:8px}
-.tbl-wrap{overflow-x:auto;max-height:360px;overflow-y:auto}
+.tbl-wrap{overflow-x:auto;max-height:calc(100vh - 300px);overflow-y:auto}
 table{width:100%;border-collapse:collapse;font-size:13px}
 th{text-align:left;padding:11px 10px;font-size:11px;letter-spacing:1.5px;color:var(--muted);border-bottom:1px solid var(--border);font-family:'Monument Extended',sans-serif;font-weight:700;position:sticky;top:0;background:var(--surf);white-space:nowrap}
 td{padding:11px 10px;border-bottom:1px solid var(--border);color:#ccc}
@@ -185,9 +185,9 @@ th button svg{width:9px;height:9px;stroke:currentColor;fill:none;stroke-width:2}
 /* DRE */
 .dre-wrap{overflow-x:auto}
 .dre-table{min-width:1000px}
-.dre-table td,.dre-table th{text-align:right;padding:12px 14px;font-family:'Monument Extended',sans-serif;font-weight:300;font-size:14px}
+.dre-table td,.dre-table th{text-align:right;padding:10px 12px;font-family:'Monument Extended',sans-serif;font-weight:300;font-size:12px}
 .dre-table td:first-child,.dre-table th:first-child{text-align:left;min-width:180px;font-size:13px}
-.dre-table tr.section td{font-weight:500;font-size:15px;background:var(--surf2)}
+.dre-table tr.section td{font-weight:500;font-size:13px;background:var(--surf2)}
 .dre-table tr:hover td{background:var(--surf2)}
 
 /* MODAL */
@@ -1766,7 +1766,7 @@ function renderAnual(){
                 const disp=row.pct?fmtPct(v):(v!==0?(row.k==='lucro'&&v>0?'+':'')+fmtK(v):'—');
                 return `<td style="${cellColor(row,v)}">${disp}</td>`;
               }).join('')}
-              <td style="${cellColor(row,totalV)};font-weight:700">${row.pct?fmtPct(totalV):(row.k==='lucro'&&totalV>0?'+':'')+fmtK(totalV)}</td>
+              <td style="${cellColor(row,totalV)};font-weight:400;font-size:14px">${row.pct?fmtPct(totalV):(row.k==='lucro'&&totalV>0?'+':'')+fmtK(totalV)}</td>
             </tr>`;
           }).join('')}
         </tbody>

@@ -311,6 +311,38 @@ th button svg{width:9px;height:9px;stroke:currentColor;fill:none;stroke-width:2}
 }
 @media(max-width:600px){
   #fabLancar{display:flex}
+  #btnExport{order:3}
+}
+
+/* ═══════════════════ RELATÓRIOS PDF (via impressão do navegador) ═══════════════════ */
+.btn-pdf{display:flex;align-items:center;gap:5px;background:none;border:1px solid var(--border2);color:var(--muted);border-radius:4px;padding:6px 14px;font-size:11px;font-weight:700;font-family:'Monument Extended',sans-serif;letter-spacing:1px;cursor:pointer;transition:all .15s;white-space:nowrap}
+.btn-pdf:hover{border-color:var(--orange);color:var(--orange)}
+#printArea{display:none}
+@media print{
+  body>*:not(#printArea){display:none!important}
+  #printArea{display:block!important;background:#fff;color:#111;font-family:'Monument Extended',sans-serif}
+  @page{size:A4 landscape;margin:12mm}
+  .pr-header{display:flex;align-items:center;gap:14px;border-bottom:3px solid #FF620B;padding-bottom:12px;margin-bottom:16px}
+  .pr-header img{height:28px}
+  .pr-header .pr-titles{display:flex;flex-direction:column;gap:2px}
+  .pr-header h1{font-size:16px;font-weight:700;letter-spacing:.5px;color:#111}
+  .pr-header .pr-sub{font-size:11px;color:#666;font-weight:400}
+  .pr-meta{margin-left:auto;text-align:right;font-size:10px;color:#999}
+  .pr-kpis{display:flex;gap:10px;margin-bottom:18px;flex-wrap:wrap}
+  .pr-kpi{flex:1;min-width:120px;border:1px solid #ddd;border-radius:4px;padding:10px 12px}
+  .pr-kpi .l{font-size:9px;letter-spacing:1px;color:#888;font-weight:700}
+  .pr-kpi .v{font-size:17px;font-weight:700;margin-top:3px}
+  .pr-kpi .v.g{color:#0a8a3f}
+  .pr-kpi .v.r{color:#c62828}
+  .pr-kpi .v.o{color:#c24700}
+  .pr-section-title{font-size:11px;letter-spacing:1.5px;color:#444;font-weight:700;margin:16px 0 6px}
+  .pr-table{width:100%;border-collapse:collapse;font-size:10px;margin-bottom:10px}
+  .pr-table th{text-align:left;font-size:9px;letter-spacing:.5px;color:#666;border-bottom:1.5px solid #333;padding:5px 6px;font-weight:700}
+  .pr-table td{padding:4px 6px;border-bottom:1px solid #eee}
+  .pr-table td.num,.pr-table th.num{text-align:right;white-space:nowrap}
+  .pr-table tr.tot td{font-weight:700;border-top:1.5px solid #333;border-bottom:none}
+  .pr-table tr.sec td{font-weight:700;background:#f5f5f5}
+  .pr-footer{margin-top:16px;font-size:9px;color:#aaa;text-align:center}
 }
 
 </style>
@@ -384,6 +416,7 @@ th button svg{width:9px;height:9px;stroke:currentColor;fill:none;stroke-width:2}
   <select class="year-sel" id="yearSel" onchange="changeYear(this.value)">
     <option>2025</option><option selected>2026</option><option>2027</option><option>2028</option><option>2029</option><option>2030</option><option>2031</option><option>2032</option>
   </select>
+  <button class="btn-sync" id="btnExport" onclick="exportExcelBackup()" title="Exportar todos os dados em Excel para backup">⬇ Excel</button>
   <button class="btn-sync" id="btnSync" onclick="manualSync()" title="Sincronizar com Google Sheets">⇄ Sync</button>
   <button class="btn-logout" title="Sair" onclick="if(confirm('Sair?')){sessionStorage.removeItem('b12auth');location.reload();}">
     <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
@@ -395,6 +428,9 @@ th button svg{width:9px;height:9px;stroke:currentColor;fill:none;stroke-width:2}
 
 <!-- MAIN -->
 <div class="main" id="mainContent"></div>
+
+<!-- ÁREA DE IMPRESSÃO (usada apenas ao gerar PDF, invisível na tela) -->
+<div id="printArea"></div>
 
 <!-- MODAL: Importação duplicada -->
 <div class="modal-backdrop" id="dupModal">
@@ -918,6 +954,9 @@ function renderDash(){
   ${uncatN>0?`<div style="background:var(--red-bg);border-bottom:1px solid rgba(255,68,68,.2);padding:6px 20px;font-size:12px;color:var(--red);display:flex;align-items:center;gap:6px">
     ⚠ ${uncatN} lançamentos sem categoria em ${mesFull} — <button onclick="setTab('lancamentos')" style="background:none;border:none;color:var(--red);text-decoration:underline;cursor:pointer;font-size:10px">ver lançamentos</button>
   </div>`:''}
+  <div style="display:flex;justify-content:flex-end;padding:10px 20px 0">
+    <button class="btn-pdf" onclick="printMensal()">📄 Gerar PDF do Mês</button>
+  </div>
   <div class="kpi-strip">
     ${kpis.map(k=>`<div class="kpi"><div class="kpi-label">${k.l}</div><div class="kpi-val ${k.c}">${k.v}</div></div>`).join('')}
   </div>
@@ -1697,11 +1736,10 @@ function toggleSort(k){
 // ═══════════════════════════════════════════════════════════════════
 // DRE ANUAL TAB
 // ═══════════════════════════════════════════════════════════════════
-function renderAnual(){
-  const annSums=MESES_SHORT.map((_,i)=>computeSummary(txnsForMonth(i)));
-  const totalSum=computeSummary(allTxns.filter(t=>t.year===currentYear));
-
-  const rows=[
+// Definição das linhas do DRE (categorias/ordem) — compartilhada entre a tela,
+// o backup Excel e o relatório PDF anual, para não divergirem entre si.
+function dreRowDefs(){
+  return [
     {l:'1. ENTRADAS',k:'totalIn',sec:true,c:'var(--green)'},
     {l:'1.1 Loc. Quadra 1',k:'income.Locação Quadra 1'},
     {l:'1.2 Loc. Quadra 2',k:'income.Locação Quadra 2'},
@@ -1728,15 +1766,21 @@ function renderAnual(){
     {l:'RESULTADO',k:'lucro',sec:true,c:'var(--orange)'},
     {l:'Margem Líquida %',k:'ml',pct:true},
   ];
+}
+function dreGetV(s,k){
+  if(k==='totalIn') return s.totalIn;
+  if(k==='totalOut') return s.totalOut;
+  if(k==='lucro') return s.lucro;
+  if(k==='ml') return s.ml;
+  const [gr,ct]=k.split('.');
+  return (s[gr]&&s[gr][ct])||0;
+}
 
-  function getV(s,k){
-    if(k==='totalIn') return s.totalIn;
-    if(k==='totalOut') return s.totalOut;
-    if(k==='lucro') return s.lucro;
-    if(k==='ml') return s.ml;
-    const [gr,ct]=k.split('.');
-    return (s[gr]&&s[gr][ct])||0;
-  }
+function renderAnual(){
+  const annSums=MESES_SHORT.map((_,i)=>computeSummary(txnsForMonth(i)));
+  const totalSum=computeSummary(allTxns.filter(t=>t.year===currentYear));
+  const rows=dreRowDefs();
+  const getV=dreGetV;
 
   function cellColor(row,v){
     if(v===0) return 'color:var(--muted2)';
@@ -1746,9 +1790,10 @@ function renderAnual(){
   }
 
   return `<div class="tab-content"><div class="dre-wrap"><div class="section-card" style="padding:0">
-    <div style="padding:14px 16px;border-bottom:1px solid var(--border)">
+    <div style="padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center">
       <span style="font-size:13px;letter-spacing:2px;color:var(--muted);font-family:'Barlow Condensed',sans-serif;font-weight:700">DRE — RESULTADO ANUAL ${currentYear}</span>
       <span style="font-size:10px;color:var(--muted2);margin-left:8px">(valores em R$)</span>
+      <button class="btn-pdf" style="margin-left:auto" onclick="printAnual()">📄 Gerar PDF Anual</button>
     </div>
     <div style="overflow-x:auto">
       <table class="dre-table">
@@ -1774,6 +1819,180 @@ function renderAnual(){
       </table>
     </div>
   </div></div></div>`;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// EXPORTAÇÃO: BACKUP EXCEL E RELATÓRIOS PDF
+// ═══════════════════════════════════════════════════════════════════
+
+function logoDataUrl(){
+  const img = document.querySelector('.logo');
+  return img ? img.src : '';
+}
+
+// --- BACKUP EXCEL (todos os dados, para salvar no Google Drive) ---
+function exportExcelBackup(){
+  try{
+    if(typeof XLSX==='undefined'){ showToast('Biblioteca de Excel não carregou. Verifique sua conexão.', true); return; }
+    const wb = XLSX.utils.book_new();
+
+    // Aba 1: todos os lançamentos, de todos os anos — base bruta do backup
+    const sorted = [...allTxns].sort((a,b)=> (a.year||0)-(b.year||0) || (a.month-b.month) || String(a.date||'').localeCompare(String(b.date||'')));
+    const txnRows = sorted.map(t=>({
+      'Data': t.date ? dtToDisplay(t.date) : '',
+      'Descrição': t.desc||'',
+      'Valor': t.value||0,
+      'Tipo': t.type==='entrada'?'Entrada':'Saída',
+      'Categoria': t.category||'(sem categoria)',
+      'Origem': t.source||'',
+      'Mês': MESES_FULL[t.month]||'',
+      'Ano': t.year||''
+    }));
+    const wsTxns = XLSX.utils.json_to_sheet(txnRows);
+    wsTxns['!cols'] = [{wch:12},{wch:40},{wch:12},{wch:9},{wch:32},{wch:14},{wch:12},{wch:7}];
+    XLSX.utils.book_append_sheet(wb, wsTxns, 'Lançamentos');
+
+    // Uma aba de DRE por ano presente nos dados, igual à tela "DRE Anual"
+    const years = [...new Set(allTxns.map(t=>t.year).filter(Boolean))].sort();
+    const rows = dreRowDefs();
+    years.forEach(year=>{
+      const annSums = MESES_SHORT.map((_,i)=>computeSummary(allTxns.filter(t=>t.month===i && t.year===year)));
+      const totalSum = computeSummary(allTxns.filter(t=>t.year===year));
+      const aoa = [['CATEGORIA', ...MESES_SHORT, 'TOTAL']];
+      rows.forEach(row=>{
+        const line = [row.l];
+        annSums.forEach(s=>{
+          const v = dreGetV(s,row.k);
+          line.push(row.pct ? (isNaN(v)?'':Math.round(v*100)+'%') : Math.round((v||0)*100)/100);
+        });
+        const totalV = dreGetV(totalSum,row.k);
+        line.push(row.pct ? (isNaN(totalV)?'':Math.round(totalV*100)+'%') : Math.round((totalV||0)*100)/100);
+        aoa.push(line);
+      });
+      const wsDre = XLSX.utils.aoa_to_sheet(aoa);
+      wsDre['!cols'] = [{wch:26}, ...MESES_SHORT.map(()=>({wch:10})), {wch:12}];
+      XLSX.utils.book_append_sheet(wb, wsDre, 'DRE '+year);
+    });
+
+    // Aba de fornecedores/categorias aprendidas (útil para auditoria do backup)
+    if(fornecedores && fornecedores.length){
+      const wsForn = XLSX.utils.json_to_sheet(fornecedores.map(f=>({'Fornecedor / Descrição':f.nome,'Categoria':f.cat})));
+      wsForn['!cols'] = [{wch:34},{wch:32}];
+      XLSX.utils.book_append_sheet(wb, wsForn, 'Fornecedores');
+    }
+
+    const hoje = new Date();
+    const fname = `ArenaB12_Backup_${hoje.getFullYear()}-${pad(hoje.getMonth()+1)}-${pad(hoje.getDate())}.xlsx`;
+    XLSX.writeFile(wb, fname);
+    showToast('Backup Excel gerado: '+fname);
+  }catch(e){
+    console.error('exportExcelBackup error:', e);
+    showToast('Erro ao gerar o Excel. Veja o console para detalhes.', true);
+  }
+}
+
+// --- RELATÓRIO PDF MENSAL (gerado via impressão do navegador) ---
+function printMensal(){
+  const txns = txnsForMonth(selMonth).slice().sort((a,b)=>String(a.date||'').localeCompare(String(b.date||'')));
+  const s = computeSummary(txns);
+  const mesFull = MESES_FULL[selMonth];
+
+  const kpis = [
+    {l:'RECEITA TOTAL', v:fmtK(s.totalIn), c:'g'},
+    {l:'DESPESAS', v:fmtK(s.totalOut), c:'r'},
+    {l:'RESULTADO', v:(s.lucro>=0?'':'-')+fmtK(Math.abs(s.lucro)), c:s.lucro>=0?'g':'r'},
+    {l:'MARGEM LÍQUIDA', v:s.totalIn>0?fmtPct(s.ml):'—', c:s.ml>=0?'g':'r'},
+  ];
+
+  const receitasRows = INCOME_CATS.filter(c=>s.income[c]).map(c=>
+    `<tr><td>${c}</td><td class="num">${fmtK(s.income[c])}</td></tr>`).join('');
+  const despesasRows = EXPENSE_CATS.filter(c=>s.expense[c]).map(c=>
+    `<tr><td>${c}</td><td class="num">${fmtK(s.expense[c])}</td></tr>`).join('');
+
+  const extratoRows = txns.map(t=>`<tr>
+    <td>${t.date?dtToDisplay(t.date):'—'}</td>
+    <td>${(t.desc||'').replace(/</g,'&lt;')}</td>
+    <td>${t.category||'(sem categoria)'}</td>
+    <td>${t.type==='entrada'?'Entrada':'Saída'}</td>
+    <td>${t.source||''}</td>
+    <td class="num">${t.type==='saida'?'-':''}${fmtK(t.value)}</td>
+  </tr>`).join('');
+
+  document.getElementById('printArea').innerHTML = `
+    <div class="pr-header">
+      <img src="${logoDataUrl()}" alt="Arena B12"/>
+      <div class="pr-titles">
+        <h1>Relatório Financeiro Mensal</h1>
+        <span class="pr-sub">${mesFull} de ${currentYear}</span>
+      </div>
+      <div class="pr-meta">Gerado em ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</div>
+    </div>
+    <div class="pr-kpis">
+      ${kpis.map(k=>`<div class="pr-kpi"><div class="l">${k.l}</div><div class="v ${k.c}">${k.v}</div></div>`).join('')}
+    </div>
+    <div class="pr-section-title">RECEITAS POR CATEGORIA</div>
+    <table class="pr-table"><thead><tr><th>Categoria</th><th class="num">Valor</th></tr></thead>
+      <tbody>${receitasRows||'<tr><td colspan="2">Sem receitas no período</td></tr>'}
+      <tr class="tot"><td>TOTAL ENTRADAS</td><td class="num">${fmtK(s.totalIn)}</td></tr></tbody>
+    </table>
+    <div class="pr-section-title">DESPESAS POR CATEGORIA</div>
+    <table class="pr-table"><thead><tr><th>Categoria</th><th class="num">Valor</th></tr></thead>
+      <tbody>${despesasRows||'<tr><td colspan="2">Sem despesas no período</td></tr>'}
+      <tr class="tot"><td>TOTAL SAÍDAS</td><td class="num">${fmtK(s.totalOut)}</td></tr></tbody>
+    </table>
+    <div class="pr-section-title">EXTRATO DO MÊS (${txns.length} lançamentos)</div>
+    <table class="pr-table"><thead><tr><th>Data</th><th>Descrição</th><th>Categoria</th><th>Tipo</th><th>Origem</th><th class="num">Valor</th></tr></thead>
+      <tbody>${extratoRows||'<tr><td colspan="6">Sem lançamentos no período</td></tr>'}</tbody>
+    </table>
+    <div class="pr-footer">Arena B12 — Relatório gerado automaticamente pelo Dashboard Financeiro</div>
+  `;
+  window.print();
+}
+
+// --- RELATÓRIO PDF ANUAL (DRE completo do ano, via impressão do navegador) ---
+function printAnual(){
+  const annSums = MESES_SHORT.map((_,i)=>computeSummary(txnsForMonth(i)));
+  const totalSum = computeSummary(allTxns.filter(t=>t.year===currentYear));
+  const rows = dreRowDefs();
+
+  // Para RESULTADO e Margem Líquida o sinal importa (podem ser negativos) — como o
+  // PDF é em preto e branco, aqui o sinal "-" é sempre exibido (fmtK() normalmente
+  // mostra o valor absoluto), além de uma cor sutil para reforçar lucro x prejuízo.
+  function dispVal(row, v){
+    if(row.pct) return fmtPct(v);
+    if(v===0) return '—';
+    if(row.k==='lucro') return (v>0?'+':'-')+fmtK(v).replace('R$ ','');
+    return fmtK(v).replace('R$ ','');
+  }
+  function cellStyle(row, v){
+    if(row.k==='lucro'||row.k==='ml') return v>=0?'color:#0a8a3f':'color:#c62828';
+    return '';
+  }
+  const bodyRows = rows.map(row=>{
+    const totalV = dreGetV(totalSum,row.k);
+    const cells = annSums.map(s=>{
+      const v = dreGetV(s,row.k);
+      return `<td class="num" style="${cellStyle(row,v)}">${dispVal(row,v)}</td>`;
+    }).join('');
+    return `<tr class="${row.sec?'sec':''}"><td>${row.l}</td>${cells}<td class="num" style="${cellStyle(row,totalV)}">${dispVal(row,totalV)}</td></tr>`;
+  }).join('');
+
+  document.getElementById('printArea').innerHTML = `
+    <div class="pr-header">
+      <img src="${logoDataUrl()}" alt="Arena B12"/>
+      <div class="pr-titles">
+        <h1>DRE — Resultado Anual</h1>
+        <span class="pr-sub">Ano de ${currentYear} (valores em R$)</span>
+      </div>
+      <div class="pr-meta">Gerado em ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</div>
+    </div>
+    <table class="pr-table">
+      <thead><tr><th>Categoria</th>${MESES_SHORT.map(m=>`<th class="num">${m}</th>`).join('')}<th class="num">Total</th></tr></thead>
+      <tbody>${bodyRows}</tbody>
+    </table>
+    <div class="pr-footer">Arena B12 — Relatório gerado automaticamente pelo Dashboard Financeiro</div>
+  `;
+  window.print();
 }
 
 // ═══════════════════════════════════════════════════════════════════

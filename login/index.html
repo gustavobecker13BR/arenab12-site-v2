@@ -1839,7 +1839,7 @@ function exportExcelBackup(){
     // Aba 1: todos os lançamentos, de todos os anos — base bruta do backup
     const sorted = [...allTxns].sort((a,b)=> (a.year||0)-(b.year||0) || (a.month-b.month) || String(a.date||'').localeCompare(String(b.date||'')));
     const txnRows = sorted.map(t=>({
-      'Data': t.date ? dtToDisplay(t.date) : '',
+      'Data': t.date || '',
       'Descrição': t.desc||'',
       'Valor': t.value||0,
       'Tipo': t.type==='entrada'?'Entrada':'Saída',
@@ -1910,7 +1910,7 @@ function printMensal(){
     `<tr><td>${c}</td><td class="num">${fmtK(s.expense[c])}</td></tr>`).join('');
 
   const extratoRows = txns.map(t=>`<tr>
-    <td>${t.date?dtToDisplay(t.date):'—'}</td>
+    <td>${t.date||'—'}</td>
     <td>${(t.desc||'').replace(/</g,'&lt;')}</td>
     <td>${t.category||'(sem categoria)'}</td>
     <td>${t.type==='entrada'?'Entrada':'Saída'}</td>

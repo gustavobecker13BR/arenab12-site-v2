@@ -14,6 +14,7 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 @font-face{font-family:'Monument Extended';src:url('../assets/fonts/MonumentExtended-Light.otf') format('opentype');font-weight:300;font-display:swap;}
 @font-face{font-family:'Monument Extended';src:url('../assets/fonts/MonumentExtended-Regular.otf') format('opentype');font-weight:400;font-display:swap;}
@@ -224,6 +225,8 @@ th button svg{width:9px;height:9px;stroke:currentColor;fill:none;stroke-width:2}
 .b12-label{font-size:10px;letter-spacing:2px;color:#555;margin-bottom:10px;text-align:left;font-family:'Monument Extended',sans-serif;font-weight:400}
 .b12-input{width:100%;background:#161616;border:1px solid #2a2a2a;border-radius:4px;color:#fff;padding:13px 16px;font-size:22px;letter-spacing:10px;text-align:center;font-family:'Barlow Condensed',sans-serif;outline:none;transition:border-color .2s}
 .b12-input:focus{border-color:#FF620B}
+.b12-input-text{font-size:15px;letter-spacing:.3px;text-align:left;text-transform:none;margin-bottom:14px}
+.b12-input-text:last-of-type{margin-bottom:0}
 .b12-btn{width:100%;margin-top:12px;background:#FF620B;color:#fff;border:none;border-radius:4px;padding:13px;font-size:13px;font-weight:700;letter-spacing:1.5px;font-family:'Monument Extended',sans-serif;cursor:pointer;transition:opacity .15s}
 .b12-btn:hover{opacity:.85}
 .b12-err{color:#ff4444;font-size:12px;margin-top:10px;height:16px}
@@ -353,38 +356,41 @@ th button svg{width:9px;height:9px;stroke:currentColor;fill:none;stroke-width:2}
   <div class="b12-card">
     <img class="b12-logo" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAABTIAAAClCAYAAABvCwIIAAA9HElEQVR42u2dP3IjSbKnfxhrnZgLPKK1pzHnBMyWnsjsEyDrBIU6QaFOUCh1lQKUVTt5gk6eoBNrazatDbC7+gDSinhCJJosEiTxJzMjPPL7zGhd1cYCMj08PNw9ItwHu91OAAAAAAAAAAAA0ClDSckRv1dJ2iAu6SdEAAAAAAAAAAAAcDJDPSYik/rvz/8sSbctff9SjwnOjVzCU5JW9c/T/xcFA05kAgAAAAAAAAAAHGRU/6R6TFwOJd0YeoetXEJzVf+UT/5sChKZAAAAAAAAAAAALlmZ1D8jtXeSMhT2Cc5KLrlZKfDkJolMAAAAAAAAaCshAP7ZKLKrpfCCRD9eY26blQye5DvAsLZTaS3DW1RJkrSWS2ruf4IaaxKZfWI8GEqaRPyGcy12K+NjNEVRe0mll4WbKy12mx7YpUzHFbcG6J7FbvpMX9Oog/Ln7wsh286RpDzwp1xpsZsju86ZBeQ/jCT9iwkbPA9P/lz+NX/dzyEfFcIhqe1ZJum64+/+IGluVG5pLbNUtq6G+2QtqahtROH7YWj20y9mksaRv6PdIGw8SCR9Rk3hiU5IL2uZVHJJzlVEcxYHAkJke2BNmUWtr+MByUw7ZAZ8hkVwQa7b1C8iX3eqEILMmoSpaoLbV/78lIcf/NDHhCf4mVe5/CQvn9saKwz1mLjMJF2hRidzLelj/bOt15nC13pDIrMvjAcTxZ/ETHl+iJCr2qm8fTant3p63H+xq8y9mQsoSWJCqBQ91NeJxoN5RBsl+DwhzaEwmPVgHqcByR7fNh72vujTePJBP149hfYYyd2szOQ3eblnf9AidLL6Z4wKNR6fjuuf/UnNmTq8fk4isw+4k35fe7LAEpRAnxaQu/pnn9gsJBVa7Ap0HuBiyh7q65XcCTrmZvjcGZxDvv3hvCfBbEjzN2GqRh973cqdDt9vsBf1zwbxXMxILgmXK7wNmCpwuU1quXHysn2entR8kEtoth6L/g25R447QVL26H0tB18EjnAJ+52x3zQebDQezOtNjJDJGDYImLKnNvq2vsUB+DqXsAyqzrNbD7/3RENuav8/DHsCffJD7+p5thKbYucykkvCVXL1Zb8qzFPkZaBxRVnL7aNIYvqy+b/VNiBv84tIZMZP0bNJbHPBdEEJxhaadCbHkv7QeFDWDXWYrwDHsz5wvTrr0ftPA0qEgE3bWQTkYw0V5jX32HUkYar23g/9XS4hlyOSNxnKRvLyKVVAz5LLJc5+E5snoXCtx02NVuY/icyYGQ9mPZzMKc8N8ANuZ2w8WAV1isd1jb1meCBQip7r6/6KOYRJZuAZy8Dmc9/Wm5RngEC4UcsJDaMMa3kUkv4tG8nL0Gx8XuvVd2KKYNknNKum1wQSmbHi6gB97OGbW03c4uxBFwvJ7/UJzYRAHOAkB72PNvou4NPcffbvhiaC3cWuDEReM/XzhE4INithwsIzP7SVhIYhhvoxefldNuodP2ctvzVQU5HAtMaN3Antop4HF0MiM04nN5ErstrX90+NPe9QHIOH7riVu3I+83x1NGUoIGDKZ3/PeiqHOVfMg8OC7bwPxL/K1M9NfRc0+p+7CdMVDuqmS2jM1FBCwwC57Ccvn1J5+t5R7Z/9LhKYVrmTS0Jf7FeTyIwN57TM1e96iynPC/AuHyX5PJ2J3kOoHGpS0ld9vZI0RSXwGU6kDMAfTkR5BJ+6MpSta7Lgxw+tFG/CO6tt0EZxJC+fUnn4zqlc/VAO/8ThW/6mC09nksiMjzmOA4lMgCO5kTudmXsIMGluBaFSoK/Pgk1rNx3iJjPwjKXXb2dTPwT/MmGqwhFc1/Yij+R9Mj0mL3+Ta3gUox3q0sYnconTz0yX6LjTBZsZJDJjYjyYKq7dnnOxtlNDgAi++a7xYE4gDnDQQcdGc7ItFD9vpPCv02212FUB6CunAf3aLuwmHMuV3InF3PA8myv+5OVbflJbTOrvwp7Hy9mbGSQy43FuU7FT8VweVoISjDMEoY0dJjMJcCBcXjYpyRCKruvNUvAfMIdO4dmvmohN/T0+62QmiB9OxFIyM5Gr8bmSq9fYh+TlnmUH3zGs15Kv4mR9HzhrM4NEZgy4ZFiBIMw5+5aeE3piTTpKZlLfBkLlHn19lc8ea+qCHZ+h9OgPp3XgC/51Bv8WziHkZGaix+TlH3I1PvvYcKbqQM6l2JBi/r8Dicw4KMRuhVUHCkcPQqPdZKbrIgsQKuUzfcVG/8gcEXglMzeHOlu5BkOxqR+KnzkiLoEL+B6QrUtE8vI5VcvyLsVtxb7P//yYXySRaR2XcGCyv8TKCZqMoYIQLYvGg1lEQRXAsZTY6De5qa/uQvf+XqLwk0NrLXYrj3OX5FkYa26C2OFC5nIJcR+M5GozViJ5eYyf1BQ5dhxqjkpmksi07dTmcjU54LB80sCfz0JQAv3lY0vdzFNEC4GyPtCkBH19ybQuaQPdYkEXC0/+1Fxs6r+GjzqZCWKHC7lStzcARnpMXv5LrkQFNuUwVQufmcslr4iLYc/399aSn5CRUVwS7DuCeNfpLwlKAM5mpvGgaqwDLc2tIGzKZ/o6RF/fDDBZw7olMzeHuvGHc7Gpf4y/WeDfgjFu5RJc85Y+f1Tb1Zy1/mgeWvjMXP3JaTyVXyXX6f45G/2YLB7p8OnkRK4p0v7PMSaBy/rdD8mJRKZJqAMUiyOFowehs09YJOg89IASfT0hwBwPci12c0TRaVBvbQ617Q8ncvXr4P21t0BXwSCzWnc3DX3eUC55mYlmMudQNfx5ueJKYi7l6qlW9X+f/nRBUut4KpcATGQ7SX9Vz/+D/jiJTJsUolZHDI4UCyhY4EbjwVSL3bShYAogVMpnf88QyTsB5nhQaLHbIIqWsdF06qFTXXjc1OcqYlhrb4K4oUGu5K58X+KDDkXysi0/6VJbMTMsi6VcwrKs/1sF8EzVK+OU1vJODc6B29oGvNAVamTac2ZnYqfTvvNPJ1ywxaShmnjoPYTrkL5sUoK+vh9gzhFDJ2Q9C3CPoRCb+sfSZZ3MBHFD4z7o6QzlTvsVkv4td+qPJOblVA19zkj2GvtsJS0kfZD099rW5bUfVAX+7KVcIjCTNJD0a/0uWyOyn+rA9XoSmZYYDzK5zmlwPCnPBXAxV7psN3x/BZCgE0J28p7q6wh9PYo7NubwGQ7OoXb94anY1A9Vh7AH0IYPmh/5uyO5xNJKJC+bZqtmrkgPZec0/T55+Ysek+NzNVfqwBdF/S5DucTsgwEb8CIO5Wq5FVwSYI4gonGoMoYGrFmh+or5KrK5CCBxrfwS5hoPEq6Yt+b/DRV+jautFruyI3lkkj6jGGetwUUH35N4fMcvDPOLsRg++bPlMgzZkXHwSDT/aouqoc+ZGVjTHmp9m/dgXPfvmcolC0PdJBzXz/mXr0Ei044TOxd1gM7hNtDxpDseWGSq43fFDwVRAKFSoq9nc13bhgmiaIXU4Pxpy38aiU390PXIl3+71KU3R/pBoscmIKnsnGy+k0vKboKwRfhJ55Ir7ETzorYjq56Ob6qwE5qTp3rI1XIbzETi6xLHN7QggAAZzM6mC+psofcQKoealKCvp/GRK+atkfUkwH3PlxuK5j6X0EWdTJ82oGKIj5ZTIZeoSGWrXh5rjG07P1K4zX0Wkn6WS7SuGGelkj4FaBPu9KRWJonM4NMGg4k4Ih/bwsdCDJbJz7BjKcEnmHHOXSkX9PV0Zoigtz5D2ZF+sakfti6lketgrBS1bzeSS16sjevvNsIx2tdqXHp8hurCfz8P0LdaytW/zEUC89Cam3rWuUNM9n8gkRkyLvj/iiCiCwIyhgQMk0caiEN/KbHRjXBTN2GB5vzAkcJvOrXWYle1LIeJ2NS34A8nHt+tYngvZiOXvEgUZr3RtGe6sE9e/qrHRjO+NnPWuqzBTa7wrip/qXW9ZOq/OZdSSfchxqEkMsN1Xofqpih3H7gNaFwtBCUAb3FTn1gLKXgCOD9QeNmkBH09n8/1OgfNkBl4xnaDQLfesKnfDG3btsTju1UMb2Ns5K6e/0NhnW7sy4nse7lO0iO5pE0RwPy6xM4PFdaNjWWt21Om+tH2IJNLqofA1d43IpEZtmPI1bbmHOFQAlMCZOhXMOQ2ZW4RGQS81j4Hfb2MOSLolc9QtvbJbv0oUYPGaLNO5lD+NuofGNpWqOSSaSFdLR0d8Tsrg7J+kEte/l2PHdo3Aa0H1QX/dqJwchr3tRwrpvfJ5ArnZGYmkcgMk/FgLuoAxRoMZAwFREBmcO4BHKJ8tv5ioy/ntr4KDPH4LsfPoeY/m019GzrlU1crhrU1NvXYhnIyc3TE76yMyHYpV5P051rGc719fTsxOMdGkj4HIu9FHb9smNZnkyuMjY1UIpEZHuNBLuoAxRwMpAwFRMAtOg+RUKCvrTDlivnF/mCi8JN4Sy12q5befyY29S35oYnHdyoZ1lbZKJyDGEPjslxL+iaXvEzkrlyvIp5j00DkvtB5Nf7hpS0IQY7XkkYkMsNzWmeGnvje0LPeBjK+nCyAWOzVscFQhrAg2IDiZRImRSyNcCW6mF+KBdtZtvKpblP/o6GxsnS1OWnpc33azgpz0clcXxjR39D0YZ+8/IfcCcWJTj81OpS/jZ1zT+CNFMbhLJKYzdvbEJqBJSQyw0kKDOVOhlhJdNkzCv7rZBIgQ0wkR8y5kWhuBWEHZs/XYU6ANccdV/Wj9xnKFny1RLaS4J9kq2lEWxv7iaf32cpmTUSLWNHzTQDP8LTj+EgueVkZnF+X2PkQ9IUkZjvM5L/cRPIT4xAMc0MB/1LSRIvdRuPB0lDgl8rv9RMCOoiJ5Mg5FzoPonNhX1lhozvwbcaDkRa7DaI4mfCbTi12RaOf5zYT5rKzqX+vxW5WP7sdzRoPUi12TfrDiccxqzAVna6Z95LuEMUbNsHZsKLhz/XpT58zx4YB+FQuXwFtsKn13OfNCRKZgTgUU0OLwlZS/iQoKWUrkUlQAtAMIwNz7hjmDQd0YJcUETTO/op5jihO8gszA0/ZxnXquSGfcvlMrx8M+Xmpmt3YTzy+C+t3txQGYtaudeK+lkuh9k6D+pxj1Rn/JpffDalt/QwbpmxrzOQ3kTkkkRmGs/rZ0BPnWuyqC42bL249jrOFAPlBix2B/Hnjm+ixAPmwdjj2/00UZ23UY5wqC8E4QRA8De6hBQup8YANg/h0sdnxtL2pv/eHb3uqX0k0egjvUSECSW4jY673O41bXxO2Z475xPP4TNHV1lnV88DX5iMnMv269oNRbQCt8O3ANaLSmMxTT8FU1rugpE/8mNyXnl8pcYnOVG53MJYafFfvzLVE4Sdw16113AVr63Ei6rm2yVzjQcIV8+CD1lMoGvXNbG3qTw6s+6XsNCi6jUhfK8xFr+R9rM+2bcEHXcudQivUbV3WkWyVbkg9+1NL0Wywy9yBr7j2imY//oKmoWw191lqsZu8+L8uCbAmOIgiKCmZmC2x2FVa7GZa7BJJP8t1L9yafy9nxwjEIQZSRNAq16JW1Sl2NfQNr+2BRN657zsyZosXWuzm5n2oZm8K+dLXtbg66icm9MfqyN+rGtSxpx3HZ+q+uVRiLDbMPesnvkZPcgckMv0xk52TWdt3grzKkNy7D1btBCUl07KLEGi3qjcFErm6OpZJgpprxhZg6Pna0D8+1ydf4W2yntnOQrY29fNX1vaN+rmx79N2VgIfbCJ/v33H8X3ycuJZ1xJjc8znGvaAb98pK59fTiLTB+NBLmlsyql++zqYJYPho36RhQAZo981LqGZSfoQ6RveoffQw6Ae3maOCPAZnvjDc9na1M86kYstPUtYw6FDqiN/b3XG/F5I+lWuxn2ucBLlqQF5P+YM/G5MTZkiQetHo5DI7Bp3GuG7oSf+csRJvdLYGHS9IGQGpIIz6At3RS2uZKaN5lZL6vXBE329QhCdcFM3dYEwg9ZjKRqYd7lsbernR9RUtuRL3Uagr5Wgbxzrt62O/L372gcfySUvi4jn6qmsdXpC2GfMy2nMnkEis9tgaWhsgt1rsXs/4HB1kizV+0sj/75zwPD7xCUzPxGIGwvEAX3tjm+1kx4Dk7ouIrz0ExOF33Tq8iZpNjf1j1kzKmP61oTtS/Bde8fQ0/c+NPg5HyT9XS7xNle41+V9zq9z7JlPf2rO1OwXJDK7D5ytnPpY67RivZact+6MrAvWLAQlFdPTM4vdTPEkKjIDz0gABCE43qf4D3kk8r4i4DCti5fZzsdml1Z4OGpT363jlfq1sT/06OMuBb7wVQ5idUFcupQ7MPBzrfdz2aj1mXj87uqMZ/UZ8xZMzX5BIrMrxoOZ/B0NPxVXB+i0a5eWkgJdjkMWfVACTTI1/wY2mluJ5lbwRF9vTeirOwX3JRLJ32o8mKCAL0gNPGPRwL+/NjIe6zP8uLJH+pZ4fPYKc+GFoZEx3+ix4/jPta7O5Lk5ibE1oTT0rPeKvwkV/MgDicxuAqVc0kdDTzw544ReaWxMujK2FoKSkkkaCC65tjb+FhZ0/h5lA0P6+vDERkwVz0mkaZ1Ihr74DLY29aXTN/Wt+VS3hvUV39UPicfvrk7Uj5Fcx/EV8u5kjvm0BwVTs3f6yYnM1nF1gGaGnnhR1+s78V+ZO93U1cSLOyiBNpgbetbVwcAPnQc7WLDRzx30PBLZc8X8R38xVfjlh85vkjYeZLK1qf/pzLI7lUG9s2g/K0HM8RO+m8PXDaclugFHMPS5BpDIbNc5GNZOupW6mEu5nasujV68watLYlsISlZM1qCwsxgf1p0UGYMhMnP66pIr3yKR/12d4IKYbafzh+aGxmJR160+Z10se6R3ic8gFpPRKzt1j6yDnl8j+SsZck53dbCvoxsSme0yl4VacY5z6mJaTg50MfHsBcgQAnadcxvNrbY0t4II9HUq+2Uo9sy4Yu49IDiW4ox5NlS/NvUlW437ztW7kccxfRD0zU6VyDroWCQhbuolPse9JJHZXoA0kXRn6InzBk7mWVpkruoTAn0PSkoma2BctpnQdbDXj0AcCBJCs9HOTuSRjMO1Ymh0dpnPOJSVplOnM5OtTf28gXXYkm91rt75tJ8Vy5cXEvlLXhc9lbeV+NDns2IP+ulHr0hktuOQppK+Gnrib1rsmlggKiZfI85hl0FJwYSFMzkU6GUGnrtk6CAAB+zy4M0llWK5bvexwyZ86OJ5nH4Kzm3qjw2Nw6ShE/u2/OHz5l7COt47co+2Z9VDefucY5WhZ8Ue+CGTv42NtUhktuIMjGRr1+hBi92kkU9yJzotXXVLW9SDLMqgBLo00KFTGQ3GcXjgqRNmXV9zuVNkMTDvsS5asJ2n+bY2N/XnHc3bGPQvCcz/gHjXzD6uDSP5K33zcObz+mLD1OydD11JdC1vy9GzUgdo24ISWnLeUqOf3cex6hvXBp5x9SxoTURzK7CCDX1dv6uvsV0xHw+mPdXIuHwGd1W+MCT/ZWOb+o/zMvYGmL5uHW1FYw8fZJ5807X6mchMPH53dca/uTH2vHAZQ/lNZJYSicymA6O57NQBco5L8/X4LBmTNutkWghKCiYtNDjX4wrEIXbisdGuREgsJ+w/d1C/OjTfcWTAdzy1SVopW5v6bdgDS/7wqUlJn/azEvhg4ul75z2Vt8918FRfecT06KU98LnGFxKJzCYd0Vy26gB9aqlzr7VEQdqCLsQYlEB3tmRo5Emf609m4JlLFAwCCMTb0NdcXDFHF0PQRXub+llLTfZsrTen1clMWMd7Z6N8nMDdyjULw0fx69+/x8jjs66Znp0zlL+Njf2YryTpJ8aikcU/kfTd0BPfa7FrZ2FY7CqNB1vZ2YlPW1gkYwuQoVsSA8+4PhD43aL3YIi7qPR1sVvV17K/RjA2NxoPJq35KQSs51Ac6Q/nsrWp/+XMTuwxrjfpCc/s009hHe+eqcfv3fRU5tZKN/i6FVIxPTtnpgBOY0okMi/HYh2g9utplUaCxLYCCAtBCY5guCQGnrF6Zgct6PxDS6duwN66bUFflyfr62I3qxvN3UYwSlONB0VPatpmUfgMblN/Zkju91rspq19uttcsLaxb8FPqVjEOmXiaU1Zq7+nMa3Nr9JI7AvNrBO+Nyvn+z9wtfxyCtlozCG5XZa8g2DekpPRRp3M1IjeAg5MU0FtHIE49MkRi9VGTyIZoyv14Yp5LE2nHjf1rSTt1uqmSZaldefYZNVQ/koHrEWH4i4Zyd9pzLzHcvcZB+Arw1u233f+YKkneSYSmZc5oFPZOvkw6aguojUjmDaoE4nCT2yv6dyMA9PwHE8NPjP0lyxafXVr/JdIxum2PmEaMxZs5zGBy1x2NvWdDejmhL6tdee40+o+fZRK0BVD+duc+NZzn83nHMNXhrd8Ad+blbOnfyGRef5in0n6bOiJF1rs5t18U2v1hiwEEhaCEhapcO3KSNYaRbmTOBaeGb0HK/p62TrqrsvGUgB/bqgBWj99Brepf2dI5h86bHYYoz+cBquL0HTCwMdauZa/U6CsC2wWwGu+mP/De1s9u6lDIvO8QCiRrStPSy12ecff+WBIPmmgn9UWBZMY56XBQCIzH4gDcyws7hv4jDyS8Yr9irntplNs6r/zbZ0lTLu0j4nH56sEXTCXvzp4mSgfQOkGwB68ZPb8f5DIPBV3MmAuO3WAtvKTaLDkbDRZJ9NCkFwykYMlM/CMBToPzLHA9dWd6PwWyZjdGWnQdKo/aeGdXm865W4QzA1JfCk/NWQtbewfc+LGp96ylrfPXP6SFh9Estrn/KpQfwjIHjxlKxKZjTCThWtpT4M2P/UQrTkbly8cLigJPcG9pHMzDkzDc9vCMxeoFhieY+cyFVfM0cU2bKe95j5bdVcX07Y//HaCfeRxzJcsX62yn9O+khbf1IcGb++TROB7QBz2YK4wkph7f/bF+k0i87TFfRLQgB7DF4914awZwzSQz2Bc+mtfctlIhK+ePPNINLcCO3PMgr5uG7uO6pI2k0hG71rx1U3LDPsMM9na1M89rgMx+cOJx+eqBG2R1PL1VepiEdFaZTmWZI6B5DasSoWT81rrwGlMiUTmKQFQKumroSd+qAv+e1qSdhvZOgmSBvIZbVMwmQlqL2AeUSAOBAjx2+jFrlAzNTdD4GODZWB8+5RDWW06ZW9T/1s9D0gOXG4nfdpQ1vLmGcptEP0hf5t8C8VT07kJEuYYeI5Fq8D8k1ftA4nM4x3OwtATrxVGgsGSQbysTqbTkdvg35LOzaHamJFsNH0oAgpqcMzgHAetj/qay12tjYF5JO9hwXbeH1irEtnb1J949rs2snUt+i1fNvH4XBVLWOPrQiW/zbpIYv7IUP4SypRuQPdmkn5TWLcDv73lF//EuB0dWFwZet4skDqIpWzt2qcXOEoWgpIHpnKwTA084/LA1TwLev9d48F3VKx3PGixSw3qa9l8qLjbaDyYylYC6jVuNB5Mvd44acpPs6aLbsO2NCTjbUByLmXpKv54kL6y8e1zw74SXMqwnhNT+S+zQhIzrFiyRPy91ru5wiu9tH4vPuZE5vuL+Uy26gB9aqy+Vv+cjtTTv+2KggkdpI0ZGglqZ8+eO5GtDR7oF6VBfV22VsdvsZspns2sz/UpdgLWbgPbQmzq99kfTjw+Dxvxl84Fl6hYSfou/wmLDyKJqcDmWIX4e8eoXtd/V5j14zMdaPDzFBKZbycYckkfDT3xog5WAnmaXSVb19nSCyebtaAEwmBmJDgsDOo89JeyQfsei43OxRXzEHzLkaw1nXKb+reGpPwpsFI61vyvtGEf+VIqlrSTSGp7X9SJgN/kbsj59jW3kn4R3cnbiEOZY3AsQ7mTjpXCLWv24RidJJH5uqOZ6JUOSYGyVJgd3yw5b+fVyexbJ1xo2s5YKL+wOHCyJWUAIWB793ztyQw8d7vrpTvtOYtkjG/rpjMEq+1QPFmnctna1L8PalP/ce6tTc2vlyQen6cUPGdY25JULikxq+W0k2ve810uSRHKRvmDHrshw2F8zjFixH4wkTuZ/VnhHqJZ6MjNDhKZh5MLQ9m6QrOVlAd0hcay85F29G8YB5ChpML8gI28ZfjAkL27NfrcDbuHu6niKeo/NXrFPDOjizY39fNAn81WomA8eO7bJh6f5je5BB0/jz//lrsS+nudlPgY6Dq3lfSpjpU2gtdIPOYdKN0QN0M9JjC/Kuz81v0paziJzNeD9mtDz5sHfNquMjb2aUf/pmsKpnVwQcJENpIrywOn21IGEAKmfCcgD5GHDjcj80jG+Uo2T5imJuaQ27Cai039duySPT29EcCp65pL0M0Qxbsk2CZomKHcae2VXAIz9NzWyRuRJDJfJhemCrdewCG+abErgn26sGoUtRVgZOYCe/BtZxLZ6SA8MxqIQ38psdFvrsuVpC+RjPWdxoPMzNPaajo1l63k1STwEjqW/WHWfDiFtaRfa71ZIY6jSDx+d4X4o9Oludyp7ZCvkP/od5xxaptE5o8OZlYPuBWWWuwmBp7T0pH10+pk2ghK1q11woVz7MzQUECz1mI3fyfAAQhNZyuD+tq1TZjJVs2+t5jXdtUCNnTR3qb+4pW1KqAnNNcA85Y1H05kK7dJNhI3wSytDRXiN89Q7jRjJVcjd2zo2c9KYkokMp8mF0ay1UVta8ixKI1pQ9rS7/oCZyIcOzOs54OVq3rTV2wlV8zAxnrj5lzo+rrt/PaCu36bRzLmVwdtVZhkRp7T2qa+FV22lTB4LMuRsLTAOzHpPoE5RRxn4ctPWYtTs5ZJ5PJXK7kGX9biswddUD+XROZjoFMYSi44ZzjcOkC2Hbf4EpklkzwYO1MaWmQ4jQkWKV+sldjow7jk6SKScf9opBbqrQlZ2mErO8lhi/5Y+iRYBnjOUtIHPdbi2yCS1uPOvsfo8LhhsNLj6csrg++x0IVNwEhkOmaylcH+Yqz2pFXH7RjukD+8iytBUBmzM9MAHS6AU+1davCZu2QiW9dd3yLsK+Y2Eq3WyI2VzrHoD49kqwEqtMtWLgHxDz2eBoPLSDx+d4X4TTCq/bVK0r/kbk1Ytsuf1MCtIBKZ40EuW3UE7rXYTU3J2J0cXRp64uPqZNoISpaGTu7GbGNKYwvO+o16YwTjELK9WxnU19Lz+pxHMv7XtaMfKhlTtFG+BN3s8vB8K43J+FacxoRae+Ua+Az1WIsPmsGnn1Ii/mAZ6cfk5VfZL+21lfSLDjeSPZl+JzJdsuq7qeSC3YDD2oKXNvQ7vikEvuzLSONBUdsYa0f+J2/YTE5mQKiUL+Zg+Pq69t5p2SWD7iPRgc8nNezrT7AaGw/mNvUfWZp62vJ/ZKgbyB36yeufIeJoFJ9rVoX4g9OFieJKXj6u2y45Wzb1gf1NZNrqHCzt6wDZPV1XGnveYwKODLnDQdviOr5WstX19WmAWBCIQwTrDDb6eCaK6Yp5mD4nTdKaYS3bp1tt+WX/73+z7sOeO7nN+X/XdhbduJyh/G24LkVd0xBI5U4oruRqXsaUvNzzRRfWwzxEn09kFrJ1Smri/dRGnxy39xZnK0GJvWtMdnEnMOf1QvRZNgsvO1tz7rwACGudSQ0+s6+1YqV4us3e1JtJIZExPRuUpe2SObb8sv/7v7iFAQe9Xkm/1z5vLk5pnkvi8bsrxO+FYT1n5nKJvd/lmuzFaGuXcvV0W/HJ+pnIHA9mstE58q8Q4416dUbeYLeSrdMe79XJtBAg3wvatiWJxoOJxoNK7gqA1c5xe769s2GSMugQKA8HkhsW9LUIaJ2eyV39iYFJXVogFLCdzfDJ+Ka+veTBnw9oHbzFtdwpzZVcsmKISMysDRXi74yknh+V3Inm7xHEjG+xlTuFmbSpZz/1To1c442Php54qbCL159CKVtXbdM3Jl9mRN7QnO0YydX2SGvDnCiu3bO13toxc82trlAEMGHv3EZU6PoaYjO2idzVJutcKayrjylT9GIWdbLd+FvsVhoP1qb8hz9L6T9RYXjX5n6u15CJ6GZuYW0gTmyPYZ0rSOv/9il+uq9twKrtL+pXItMFNpacIOt1MQ8ZTGuJzJnhoCQJ8HqdFRI97iqP1I8GN/k7toYoBkKmePb3zMiaGBaLXaXx4EsdkFrnVuNB7v1Gi42mU6ET06b+fu6PzTztP0sSmXAsV3KnzXI9Ni2Bt+MNXzA2zY9lVv/0sSb2fp3uzLftTyLT1TScy1ZGPK+vZMeCNYOZGg9KxgI4jm9H1FPNEBMEyvbAdVMLUXcZ5FMtdlONB7E44jONB4XnDWFs56Xz+/2NNov+sB0f7c8SLYRTuZU73f9Jtg4RdclI/vIS1IxoZvxS9fPU5VP2N/rmXX9xn2pkzo055d/e6BxsE3uNZ16rk5kKIL4F6HXouAthU74SRIW+Joa8xk8i0Y0r+b/iiM9wqS7ar4t5jM0KF+pkwvl8lbsxMUQUQa0NFeI/e8xmtfz+pfhrXb4XP36QS+h68bP6kcgcDyaydaX5QYvdJNLRsOYNHVpkMuw4RMQx5SsIxMFOUsCdJmQtvAS38fgtEv2486wT2M/z+Wa+2eXh+VXJVgNMTmXCZTbYrdNDRPEDicfvrhD/UYzkyiQU+rHDeJ8Pd3hPYO6JP5HpGlR8NfTEri5mXwLO8EkJSiBiju0Ai85DyBQG9dXCWjitHdYYmNUny7v2QRPRJO1clhFv6ttLJPyzRCPhEm7kmn8kiOIvfMqCCf12zDPTj6cu71jLw0lg7ok7kelqGRbmJk9cdYCsG86UoAQi5ZQOsBnigmAdq5e1pFMDzx2+b+J8kTwSPbnWeyU02gHbeR5bxb+BZssf5kQmXM5VrfcjRCHJXwmcrTroKG2IYe3rzMWpy0M8SPpFASUw98Te7KeQraTTpwjrAD3H2vu5OpmP4xK7Yw394PgOsHTcBUvJAKevoTufWzNr/WJXajy4l63yPK/xsW78U3b4nfgM55FFvqm/t12fzTxtt3UyKcp5HBb9s6s6Pk/lkkZ9xefaUDF1lNRjkIuE5WE/1c3TqQJOesebyBwP5sYU8/6E01F2Wew2Gg+WxsYmfWL0M2wbRLA4nRIkEohD6MkAa/paGpNxXjuyMdxGmKnb63y3TNGT+WKwOeQ5/nCp8cDWM/9ZSv/Zuol9wO84m9Gzn7S2d6HZ7hu5k119jqkSj99d9ljmea13HNA4zLL2kwoZ2GiI82r5eJDLdZCypDR5jwPP0EkJSiAS3HW9l1dxj9V/gNAoDOprYUrCbtNjEom+3Gg8mHbki2ZMz5O512I37dH72jp52E2dzIppcDarOsaay52kSuWuzf4s6VNg+nYX0bpyDglxeCdkerwy/ofclXGSmC9jw2+1nUieyCt44ktkuhqGM2PKk/fgCo1lJyWtdSsVgG3yM660EoxDqCwPrJ0W7LS9IMJ1jo7luufn2lfsxneAY1mrX5v69vzhbupklkyFxlnVsXEql6z4Usefvpmqv/Uyfa4PVeSyzfSYjPtN7nAb/S1+ZCtpIelXuc2OiQzWTY0rkek6UhbGlHXSg7qY1p2UqzroybB7YJgPWuyKE21qwuIPZtYSp6+h77SvTzwRHRJ5IMFvE8wiD1RtBp/92tS35w93UyezYiq0ykqPCcRv3uOrwJqHdMTQo6+yVpy1STORvDyGez12Hs9lryn2D8R2IrOQrePCi/qUQ79wQdza2FOnBCVgmA9n2hp0HiwlAVKDz2xt7Z5Goju3Gg8mrX26jaZToa1RFTbMAO2eyqSbcnds5E5h/SK/G1S3PfQ1E4/fXUUmx5lIXr7HPnn5d/2Y8DVPPM1+XM0jS/ULl1rs8h5Pqkq2ks4ZQQkYDhDnZ/5bC87lUv3ufNlfXp4wtqCvhXGZz+o65DGsh9O6i/mqhc9OmaDHa1UvN/XdfNpoPFib8of/WbbZ8KdiOnROKXc6q/Ro16c9s5mp5/G2zKiOySei1uVr7DuOlzLStOdc4khkuoLqn4099Y3Ggx1zzQw0+QGLfLgwQLwz4RD27zoihBcc9CWIkNx1pD8ieI/9tca0p7oYjBev8WCMGIzQ7onMEgF7YVPbrJX8nGi7lTtdV+GrtI5VGedyCcw7putB1voxedkL7F8tdzWx5ugvAMAPXJbEtNHcakkSE57o6xX62gHuCvCXSDTntqXu4imTEqKk3TqZJQL2xkZ+ewHkPZJ14vG7Lc2xkR6vjn8XScyXPqX0SdI/allN1KMkpmQ9kema+8xFPQQAgD1bSf9o4KpeZuBdC4YbalIDzxhTkD6TvVrXrzGv/cmmfNNEXHmDmGnvVGaFcL2vUb4aAOU9kfFI/vIWSyMyympd/JekjyLP8zS+W+ix3mVS+2K9tZvWT2TORN1CAIA9a7mr1k0saqkRpxtg7/iGThGNtN3J0lgCzys128U8ZTpC1PyzlaU31m7K1ph6tMN9sJ0+37EKWC5DuROFK7nGPZR0czzo8dTlsPa75thKh91Epus2SU0dAIDHxS5pJInpTieFv0m02JUMO6CvXt/nWyxa1GA5jZRJCVHTzonMCsEGwUbu1JcP+mA7E4/fHaIPMpJLnq8kfRW3GZa1X/WrpEE9J2bYx8PYbPbjru18ZfgAACRJ37TYTXrmTN4z7GBIXx8ilf1U7oRADFe/5hoPkgbqmKZMSYiadupklgg2GAr5OSzUB9uZePzuKiA5jGr/oe+H0p52GC/lErpwJPZOZLqTFyx2AABuAfy14SSmZOOaLusAWAp+iiglH9cV82tdeq3SRtMpgMtp/lRmhVB7v1714Tqxz3cMYY6N5K5G/0v9TWLe6/B18RWm5zQsXi0vcRIBAP66St6Gw5kaWQsAJBLvfnE2KJYT0h/rWz8x206Ay2m+TiZrelj4agwzilimicfv9n0rZKT+JjCXkr5I+kXuungmros3gq2r5ePBTDT3AYB+s5U01WI3a8nOjhR+jZp1Qw2NwDo29HXbA33N5U4TxHHF/PyAM2NSQi9o9kTmEoEGx8bT944U78m01ON3l56+dyjXxOdzj+bOupZ3Uf93I2gFOycyx4Nc0keGDAB6zP4U5ixSRyt0hwwIDM6hiH4U3BXzaSRvc6Px4PR3sdJ0CqAJmq2TWSHQ4Fh5+t5RxDJNPH63jzk2qfUo9iTmVo/XxX+udTivfb8NpqQ9bCQy3TWfGcMFAD1lK+mDFrtUi13bzmVmQB4lKgE1KfoaCG6DJZamRp/r076x6SJAczR3KpM1PTxWnr53FLFME4/fXXXsl63kGjPHWg5w3138F7lTp5lcrmol6IzwE5luh7sQdTEBoJ98kTTSYjfv0AEJHYIe2JOhr0GRR/Qup9rclOkIvaK5OpkVwoTIGcrfif2tukmwDeVyNr8r/JI/58jwXtIHuVOXidyJU+IRj1g4kTmPcDIAALzHQtLPWuym9bXN9nGn30PfNFp2cCoVLGBDX9e90lf3rl8ieZtbjQeTE34/Y1JCr2juRGaFMIMjRQSNknj87rKD75jIJUvvIhqztdypy1/1eOpyLk5dBkPYiUxXo+iOYQKAHrFPYOYeEiAWHNcSFQFD+lr0z4Ltpoqnece0vhn0nr86Epvu0DeaqZP5gCABf6VVqhY/e1T75bFcI993GP9H/W6TXvpxRgi3a/l4kKpfHa4AoN8s5LqRrzw+Q2ZATiWqAgEEBujr2+SS/ojgPa7kTmBkEegiQPP8WUr/eZH6s6aHyQgRNEoSoR+S1euj9QTmsn6PQpy2NEWYJzLdznbB8ABA5Kzldv7+7ukE5nNuDciMoAf23KGvgbLYVXJXsuLQs/Ege+d3UqYj9JLL62RWCDFIOGHeLD7XiKbn2FAu8feb7CYx13rsMp6IRj0mCe9EJs19ACB+7iXNtdgVAdnezIDcHjqrFwph425thM6y5/o6lTuxEUNAPNd4MHpjPDMmJfSS/1Nd+gkVQgyOFBE0ykj+8hpLSU36IYlcEvPG4Dhs62efY3fiIMQTmTOjkwMA4Bg+aLHLgkpi2nFcS9QHajIDz1j0eoRc0i+P5G2u5BKzL7HRdAqgHS47kdlVN2U4jcTjd2+QZ6NUDftdpezlae712LBnIpKY0RBWInM8yCWNGRYAiJgs0OdKDciuQH3AkL6WvR+lxa6sg4gY+PjKSeCU6Qi95f9vLzmViY1kfX1OhTyDlOdEtq6Sb+VKd/1cx13EDxESTiLT7Wh/Z0gAIHLu6jrA4eBKeoS+w7qt6+5B37Ghr/skHrhTmdtI3mUeWJAK4J/zT2WypocJNq1ZEo/f3cQcm8t1JbfAUtIHudOXU3HiO2rCSGS6oASHHwD6QsbznAxrBFgKsu4Zppq4rphfazyYPvt/dwwy9Jo/z16eWdfDI5HfU3cx6sStYXnOZeO27IOkX/RYwxN6QCgnMgtRXwgA+kNoQX1qQGYEPLAnQ1+N4WoCP0TyNp/rW0RWmk4BtAsnMllfm2EboTwTj999yZo7rOdn6EnMfQIzxe/qH/67lo8HM/ndqQCwxlKLXdJ7KYwHE9m56vCcm7oD7iqQ57EQjBdMfTCkrzjUL8nrwCiGjet5HaBmDCv0nn2dzP84yTVdK87GLjHYaV9U+CtByHOo8Jv6PMhdHcfX6jF+T2SOB5mkjwwDAAHyGRQ4i43Y4ZGk68BltQ4o6Qvo6zH6WjFYz3BzeBrJ29zUm2kpAwugc05l4suGR+J5fa0ilak1eZYKN4m5lutAnmJDwF8i013LmTMEACdTIIK/guKl4TfIA3mOzICscFZgT4q+mrbbM8VzxXwqC02nALrg9DqZFUILjonn749RJxJjvsg84HXtSy1P4mCQ5CuR6Zr7zEVdTIBzAkGC5B8XXKtc/1VnzS+pAVmh87AnQ18JlgMBHxZgz+knMiuEFhRD+a+HGOPa6SspuNXpHbvnCrMm5lLSP+Q2DzdMVdjj60TmXOxiA5zDAyL4gcL48+cBPEPKOIMhLOhryTC9gbt2/wVBAETEvk4mdtIqE8/ff07iDX/ldaoTfz9XmEnM/SnMiikKz+k+kelqCt0heoCzKBDBDwHxSravl2dev9113A39VNFSi90GZYf6BLMFfV0xWO/a7qlcrSsAiIXjT2UuEVZQjOQ/kVlGKNfUiDxTSd8Dk91Wrhv5lOkJr9FtItMFzV8ROwALfYPMDT/7dW0X++hkofOAvvabHBEARMTxdTKxk2Exk/9NwiJCuSYev7s68veGAcp+KZdcx07Am3SXyHSdRgtEDnA2WzrhRun8+AzmUwPywZGBPRn6GhGu3vM3BAEQCcefyMSXDWtdDeGmZIxrZ2JAnoXCuumyqGOTDVMT3uOnDr8rtInyHlu5HSronlTSLWI4OIfgZTC80niwlN26u5mXb3VN124NjC96D3ssrAslw3QS09oGXiOKYFnif3j1D+z4Nvs6mf+RvPebFUMbBCOFcatpqfjqY448rmtrHZcInAbmVy3ETQ04gW4SmePBXPaSDBndoT3hrtr+jiAIkE9gLrtlK640HmQeEnapAdmsNR5MUe+ezumntSbHg8zAMz9Qz/XUsGW3qWun/4YwgmRb+8MrROHFH96Y823+Wb6XyNyKRGYIDBXOIaNZhPJNPH53deTzfQ7JGxBJTDiR9hOZ40GuMLtgvcUnkpheA5tS4wFyeAk6+TqFbNffzdT9iZfUgFyuA3O0oNs5bU1fsdHnrfmFxoN70QgyzLWJJCY25RT+LKX/mrz1GxXDGgRzhXPIqIhQvkngdmMWkKzuRRITzqDdGpmuw+jMmEzutdjNUA3vPCCCH1gTTLwZCK9kuwvmuL7q3SUpigMB27vKoL6WDN3Z5HIntSAcvrCp7923qczNi/frZKJTfhnKJTFD2ThaKM56iD59luqI9TaUK+VLkcSEM2kvkemC8kK26mKumUwEhIFSIIJ3mRt//qyzb3LN125QGTBh/50/Ebq+bkn6XBLK7jZy9bogDB602DEeYVCZetp9ncxY3icuhvX6GtJNyVmksvaZKCzf0YFQZL6tY58NUxPOoc0TmYVsFW/f1wFiMuG4hR/Yw2s2xzJZh9+Voi5gyN5lBp8ZTsXdhuE2hn/WRuYc/l+ovH0qE//eD6lcQ52QNgUfItWHxON3v3c7baJwDpnliq/JE3RIO4lM15zBWtfpyYGrbIDjhjzsBMEr2b5eftfh9fIUhQFD9i41+MxwfmDDFXO/sKmPbbmMP1995LVIXHTNUO7G0u8K75bkNFKZJx6/u3pHFyaByOhe3DaEC2k+kek6i1przrDQYjdHHUIakd1GtpNSTbIkqDga6/M47+h7UlQFArZ3K4P6ikPezNq/UrxXDS3wgU394OZEae6ZXz+RiW51x1AuUbhSmE137xXvBqBPn+UtmU4UTjJ7whSFS2k2kema+8zNBU1MplApEQEBcs9klbf+Dc5OX6MqYMLuu3quoesrzdiaxNVmZCPTg+TZ1A8WWyUXXq+TWTGUrbOPxf8td7Ao1F4Vk8jHwBevzbFhQDL/Ik5mQwM0l8h0VyLnstXch7qYYYPDcyiwh7cC4JXxAPimTty0SYqigCF7l2Gje0mOCDqFTX384WY5fCoTW9kOmdxJ9pWkPxTmCcynxJ7I8lmH9DVbMVE4OZoZUxaa4KeGldJaF9ycUxQEh8FDJ9xTmUv6GoFD2hYpKgIB27vCoL5io5vXg0rjwRfZK1VkkW3tD28QRdA25qOpJ/6zlP5r8vz/VgzlRSRyJ+uSJz83Bt8jjXjdHHq25eUbuhPKelMwlXsfp8+b+KBmEpnjwUTh7/4858uBgAnCCmRWGg/W6vc12HsU4WQK2U5kTtRuIvMOFYFAeXgl4LFgc6B5ZnInMymF0S45dTGDpzT3xIdPZGIrT2com8nKt7hlWFvhyoBsrxj/3jNt6oMuT2S6emvWkgYPdQ0msOG8jXv+/nAKLgG+NOz4XWs8SFoJLMeDFAUBM/bO+Rehl6uhGVt7tnyj8SCX67YL7fCNTX0zc8GWX7Ovk/kfydP/SwIDAABfvxEuq5Hp6mKWxoTn6mKCFSomO5zB3Pjz5y19bopqQMAUz/5uYa3GRreJK62yQBCtsNRiN0EM+MOt8U/MIwAAPPE7GuTSZj+lbDX3cYE8pycs0WcvaM11r7MpjD9/ZuxzAS5le8DepaxRIFduY4sYGp5vbGzhD7fNn5hHAAD4i6rJDzs/kTkezGTv6uYnEkPGcOPV1wAGD/B8vVnJdvfy68avgbsT9DcoB5iwd05fw7+GyLXcLmS8EV3MmyZjUx+fsHU4kQkAAC2tY+clMl3Noo/GBHevxW6G/qD0vHdvmBt//qYD9xSVAEP2zoK+PjBsHeESxjS/a4Yv9ZV9sDUHVpLWpp55XycTAADA+4lMV3x/ZkxoS7GbH1OAy3vDMRTGnz9r+PNSVAIMzdfU4DNDu0zEFfNLuafZJUFgp3AqEwAAnP/W6Bp2WiLTXfUqZKsu5lZSzhUaHDdjLOvddzgXJz/LJ3iuNB5kDX5ehlJAoKwP2LvUwHMToXdv06cI4oJ5xqa+dezZHOpkAgBAC/mcU09kziVdGxPahLqY5oOXPnpBeH7NUBh//qyRTxkPRgZtN/TV3jl9Db2e6xbfwos/MBNX+s/TV+pi4hv6gBOZAADQwvp1fCJzPJhKujMmsG9a7OboTRQ8MNnhDArjz5/VJ+EvJUUVwJC9Sw0+M3THBBGcITMS7/ax2ACTOpkAAOAtkem65342JqylFjucXZSf9+2307+R9evlzZzKTFEGCJjCoL4WDJs3u15J+oIgjpcYm/pRUZl7Yk5lAgCwdjXM+4lMd8XLmsO+FfXgYqNPXtAD178apTD+/FkgnwHQBssD9i5lTYI3cQ1rlgjiiPnFCVb8Yd9QJxMAoM+sJW2a/tC3E5k2m/u4oJ1GKbFR4aTCmRTGn//uouvl40Fi0IZDX+2d09fQ67mu8TGCYIII3oS6mPiIYcCJTAAA1q2Gee9E5kzhF9x/zpeeNoeJG+eI9+X0RcGAN64798bfIrvg36YoARiydxb0FR8jDNteSvqGIF4lJ+Eerd7bgjqZAAB9ppUF4PVE5niQSxobE9JDfd0I4qQPwSOdcNuhMP78kwv+bcbwg6GgPMWewAlM5a4swY9802KHnsaLvQaYnMoEAOgrrSwAhxOZ7mrXd2MCWhOwMwl4R3gF6wHdTV2v+BxuGX4wFIzfYafhaNyJ+xxBPJtXNLuMncrcE1MnEwCANatBXiYyH+tiWoM6QEyCGMDTay/Y7d/18vEgZfAhYAqD+rrE1wjOvpcR2PemoNllP7DnK3IiEwCgj7R2g+BvrwQW18YE9IHruL0IVlaK/wpZwUAj21fIz/g3BLRgKRhPDT4zhGMft4hBKYn2XtrO8KFOJgAA61WD/JjIHA9msncNcaHFbo6OMBkigE647VIYf/6buuzHaUEtQJgcqgecYUfgPE9wtxFdzD+xqd8rfbfXAJNTmQAAfaM1v+QxkTkeZJI+GhPMEse1d5S8G1zg+Fu/fpgf/ZuuTMgNAw8m7J0VfbXYMbg/Nn4ui01QmuFei90MJSA4DBrqZAIA9Nvfb5C/1QFEImluTChbSTlXaHDcmOhwAoXx589O+N2U4QZDc9GCvlKHMXxy9e+K+VI0PCI4tAAnMgEA+sRa0qatD/9bfQpiLunKnLPKFZr+4cY81iClYICR8Ttcn3C9PGO4wVAQnhp8ZgjPR1hJmvbojdnUx4bagTqZAAB9olWD/ze5JKa164fftNgV6AbOW0TQCbebIHcj+6eqJkf+XsqAQ6AcqgecsfZAQ3Z+Jov1A89dD9jU76uer2SxASanMgEA+kKrBv8nSbP6x9LizSrYbybmdPZ9Ngwr+tOwruQMNRjS4fD1lYSRJTJJo+jfEn8YPZeGpp74f35a6b8mK4YOAAAu4b8BQs9pL8kDU+gAAAAASUVORK5CYII=" alt="Arena B12" />
     <div class="b12-sub">FINANCEIRO</div>
-    <div class="b12-label">SENHA DE ACESSO</div>
-    <input type="password" class="b12-input" id="b12Pin" maxlength="20" placeholder="••••" onkeydown="if(event.key==='Enter')b12Check()"/>
-    <button class="b12-btn" onclick="b12Check()">ENTRAR →</button>
+    <div class="b12-label">E-MAIL</div>
+    <input type="email" class="b12-input b12-input-text" id="b12Email" placeholder="seu@email.com" autocomplete="username" onkeydown="if(event.key==='Enter')document.getElementById('b12Pass').focus()"/>
+    <div class="b12-label">SENHA</div>
+    <input type="password" class="b12-input b12-input-text" id="b12Pass" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')b12Check()"/>
+    <button class="b12-btn" id="b12BtnEntrar" onclick="b12Check()">ENTRAR →</button>
     <div class="b12-err" id="b12Err"></div>
     <a href="../" class="b12-back">← Voltar ao site</a>
   </div>
 </div>
 <script>
-(function(){
-  var HASH='4540403f';
-  function hsh(p){var h='';for(var i=0;i<p.length;i++)h+=(p.charCodeAt(i)+13).toString(16);return h;}
-  window.b12Check=function(){
-    var pin=document.getElementById('b12Pin').value;
-    if(hsh(pin)===HASH){
-      sessionStorage.setItem('b12auth','1');
-      document.getElementById('b12LoginScreen').style.display='none';
-      document.getElementById('b12Pin').value='';
-    }else{
-      var e=document.getElementById('b12Err');
-      e.textContent='Senha incorreta.';
-      setTimeout(function(){e.textContent='';},2000);
-      document.getElementById('b12Pin').value='';
-      document.getElementById('b12Pin').focus();
-    }
-  };
-  if(sessionStorage.getItem('b12auth')==='1'){
-    document.addEventListener('DOMContentLoaded',function(){
-      var s=document.getElementById('b12LoginScreen');
-      if(s) s.style.display='none';
-    });
+const supa = window.supabase.createClient(
+  'https://zryazxwxrufzeyaoeqbm.supabase.co',
+  'sb_publishable_Hux6NxPxXSMnb1gW5gDXzA_j5ja3bhN'
+);
+
+window.b12Check = async function(){
+  var email = document.getElementById('b12Email').value.trim();
+  var pass = document.getElementById('b12Pass').value;
+  var btn = document.getElementById('b12BtnEntrar');
+  var errEl = document.getElementById('b12Err');
+  if(!email || !pass){ errEl.textContent='Preencha e-mail e senha.'; return; }
+  btn.disabled = true; btn.textContent = 'ENTRANDO...';
+  const { error } = await supa.auth.signInWithPassword({ email, password: pass });
+  btn.disabled = false; btn.textContent = 'ENTRAR →';
+  if(error){
+    errEl.textContent = 'E-mail ou senha incorretos.';
+    setTimeout(function(){ errEl.textContent=''; }, 2500);
+    document.getElementById('b12Pass').value='';
+    document.getElementById('b12Pass').focus();
+    return;
   }
-})();
+  document.getElementById('b12LoginScreen').style.display='none';
+  document.getElementById('b12Pass').value='';
+  if(window.b12Start) window.b12Start();
+};
 </script>
 
 
@@ -417,8 +423,8 @@ th button svg{width:9px;height:9px;stroke:currentColor;fill:none;stroke-width:2}
     <option>2025</option><option selected>2026</option><option>2027</option><option>2028</option><option>2029</option><option>2030</option><option>2031</option><option>2032</option>
   </select>
   <button class="btn-sync" id="btnExport" onclick="exportExcelBackup()" title="Exportar todos os dados em Excel para backup">⬇ Excel</button>
-  <button class="btn-sync" id="btnSync" onclick="manualSync()" title="Sincronizar com Google Sheets">⇄ Sync</button>
-  <button class="btn-logout" title="Sair" onclick="if(confirm('Sair?')){sessionStorage.removeItem('b12auth');location.reload();}">
+  <button class="btn-sync" id="btnSync" onclick="manualSync()" title="Sincronizar">⇄ Sync</button>
+  <button class="btn-logout" title="Sair" onclick="if(confirm('Sair?')){supa.auth.signOut().then(()=>location.reload());}">
     <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
   </button>
 </div>
@@ -503,25 +509,6 @@ th button svg{width:9px;height:9px;stroke:currentColor;fill:none;stroke-width:2}
   </div>
 </div>
 
-<!-- MODAL: Configurar Google Sheets -->
-<div class="modal-backdrop" id="gasModal">
-  <div class="modal" onclick="event.stopPropagation()">
-    <h3>⚙ Configurar Google Sheets</h3>
-    <p style="font-size:13px;color:#aaa;margin-bottom:14px;line-height:1.6">
-      Cole abaixo a URL do seu Google Apps Script (Web App). Os dados serão salvos no Google Sheets e sincronizados em qualquer dispositivo.
-    </p>
-    <div class="form-group">
-      <label>URL DO APPS SCRIPT</label>
-      <input id="gasUrlInput" class="gas-url-input" type="text" placeholder="https://script.google.com/macros/s/..."/>
-      <div class="gas-url-note">Encontre essa URL em: Apps Script → Implantar → Gerenciar implantações</div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn-outline" onclick="document.getElementById('gasModal').classList.remove('open')">Cancelar</button>
-      <button class="btn-primary" onclick="saveGasUrl()">Salvar</button>
-    </div>
-  </div>
-</div>
-
 <div class="toast" id="toast"></div>
 
 <script>
@@ -558,7 +545,7 @@ let editingTxn = null;
 let confirmCallback = null;
 let dupCallback = {onContinue:null, onReplace:null};
 let chartRec=null, chartExp=null;
-let GAS_URL = localStorage.getItem('arenab12_gas_url') || 'https://script.google.com/macros/s/AKfycbxmzmGueotLKK9YmPUeUOPiLRCsAMH3xLyT1DGnCVH2plqOiLTAhUNomfWr69m_IeTg/exec';
+let GAS_URL = 'supabase'; // sentinel sempre "ligado" — o backend real agora é o Supabase (ver funções gas* abaixo), mantido com esse nome só para não precisar editar todos os pontos que checam "if(GAS_URL)"
 let customMap = {};
 try{customMap=JSON.parse(localStorage.getItem('arenab12_customMap')||'{}')}catch(e){}
 
@@ -580,73 +567,115 @@ function fmtFull(v){
 function fmtPct(v){ return isNaN(v)?'—':Math.round(v*100)+'%'; }
 
 // ═══════════════════════════════════════════════════════════════════
-// GOOGLE APPS SCRIPT (backend)
+// SUPABASE (backend) — mesmas assinaturas/nomes de função de antes
+// (gasRead/gasStats/gasWrite/gasWriteMonths/gasMergeTxns) pra não precisar
+// mexer em cada lugar do código que já chama essas funções.
 // ═══════════════════════════════════════════════════════════════════
+function txnToRow(t){
+  return {
+    id: String(t.id),
+    date: t.date,
+    description: t.desc||'',
+    value: t.value||0,
+    type: t.type,
+    category: t.category||null,
+    source: t.source||null,
+    month: t.month,
+    year: t.year||currentYear,
+  };
+}
+function rowToTxn(r){
+  return {
+    id: r.id,
+    date: r.date,
+    desc: r.description,
+    value: r.value,
+    type: r.type,
+    category: r.category,
+    source: r.source,
+    month: r.month,
+    year: r.year,
+  };
+}
+
 async function gasRead(year){
-  if(!GAS_URL) return null;
   try{
-    const url = GAS_URL+'?action=read&year='+(year||currentYear);
-    const r = await fetch(url, {redirect:'follow'});
-    return await r.json();
-  }catch(e){ return null; }
+    const { data, error } = await supa.from('txns').select('*').eq('year', year||currentYear);
+    if(error) throw error;
+    return { txns: (data||[]).map(rowToTxn) };
+  }catch(e){ console.error('gasRead error:', e); return null; }
 }
 
 async function gasStats(){
-  if(!GAS_URL) return null;
   try{
-    const r = await fetch(GAS_URL+'?action=stats', {redirect:'follow'});
-    return await r.json();
-  }catch(e){ return null; }
-}
-async function gasWrite(txns){
-  if(!GAS_URL) return false;
-  // Redireciona para gasWriteMonths que tem lógica de fallback
-  const byYear = {};
-  txns.forEach(t=>{
-    const y=t.year||currentYear, m=t.month;
-    if(!byYear[y]) byYear[y]={};
-    if(!byYear[y][m]) byYear[y][m]=[];
-    byYear[y][m].push(t);
-  });
-  const results = await Promise.all(
-    Object.entries(byYear).map(([y,months])=>gasWriteMonths(parseInt(y),months))
-  );
-  return results.every(Boolean);
+    const { data, error } = await supa.from('txns').select('year');
+    if(error) throw error;
+    const by_year = {};
+    (data||[]).forEach(r=>{ by_year[r.year] = (by_year[r.year]||0)+1; });
+    return { by_year };
+  }catch(e){ console.error('gasStats error:', e); return null; }
 }
 
-// Escreve só os meses modificados de um ano (mais eficiente)
-async function gasWriteMonths(year, monthsObj){
-  if(!GAS_URL) return false;
+async function gasWrite(txns){
   try{
-    // no-cors: browser permite mesmo em file://, não retorna resposta mas grava
-    await fetch(GAS_URL, {
-      method:'POST',
-      mode:'no-cors',
-      headers:{'Content-Type':'text/plain'},
-      body: JSON.stringify({action:'write', year, months: monthsObj})
-    });
+    if(!txns || txns.length===0) return true;
+    const rows = txns.map(txnToRow);
+    const { error } = await supa.from('txns').upsert(rows, {onConflict:'id'});
+    if(error) throw error;
+    return true;
+  }catch(e){ console.error('gasWrite error:', e); return false; }
+}
+
+// Substitui por completo os lançamentos de cada mês informado
+// (apaga do banco o que não estiver mais na lista daquele mês/ano)
+async function gasWriteMonths(year, monthsObj){
+  try{
+    for(const m of Object.keys(monthsObj)){
+      const list = monthsObj[m]||[];
+      const ids = list.map(t=>String(t.id));
+      let del = supa.from('txns').delete().eq('year', year).eq('month', parseInt(m));
+      del = ids.length>0 ? del.not('id','in',`(${ids.join(',')})`) : del;
+      const { error: delErr } = await del;
+      if(delErr) throw delErr;
+      if(list.length>0){
+        const rows = list.map(txnToRow);
+        const { error } = await supa.from('txns').upsert(rows, {onConflict:'id'});
+        if(error) throw error;
+      }
+    }
     return true;
   }catch(e){ console.error('gasWriteMonths error:', e); return false; }
 }
 
-// MERGE: envia só lançamentos novos/alterados (não o mês inteiro).
-// O servidor junta com o que já existe, sem apagar lançamentos de outro dispositivo.
+// MERGE: grava só os lançamentos novos/alterados e apaga os removidos —
+// nunca mexe no resto da tabela (nem no que outro dispositivo já salvou).
 async function gasMergeTxns(year, txnsList, deletedIds){
-  if(!GAS_URL) return false;
   try{
-    const months = {};
-    (txnsList||[]).forEach(t=>{
-      if(!months[t.month]) months[t.month]=[];
-      months[t.month].push(t);
-    });
-    await fetch(GAS_URL, {
-      method:'POST',
-      mode:'no-cors',
-      headers:{'Content-Type':'text/plain'},
-      body: JSON.stringify({action:'merge', year, months, deletedIds: deletedIds||[]})
-    });
+    if(txnsList && txnsList.length>0){
+      const rows = txnsList.map(txnToRow);
+      const { error } = await supa.from('txns').upsert(rows, {onConflict:'id'});
+      if(error) throw error;
+    }
+    if(deletedIds && deletedIds.length>0){
+      const { error } = await supa.from('txns').delete().in('id', deletedIds.map(String));
+      if(error) throw error;
+    }
     return true;
   }catch(e){ console.error('gasMergeTxns error:', e); return false; }
+}
+
+async function loadTxnsFromSupabase(){
+  try{
+    const { data, error } = await supa.from('txns').select('*');
+    if(error) throw error;
+    allTxns = (data||[]).map(rowToTxn);
+    lsSave();
+    return true;
+  }catch(e){
+    console.error('loadTxnsFromSupabase error:', e);
+    lsLoad();
+    return false;
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -748,90 +777,17 @@ function changeYear(y){
   renderNav();
   renderMain();
 }
-function saveGasUrl(){
-  GAS_URL=document.getElementById('gasUrlInput').value.trim();
-  localStorage.setItem('arenab12_gas_url',GAS_URL);
-  document.getElementById('gasModal').classList.remove('open');
-  showToast('URL salva! Dados serão sincronizados com Google Sheets.');
-  syncFromGas();
-}
+// Sincronizar agora = buscar o estado mais atual direto do Supabase
+// (o Postgres já é a fonte única de verdade; não precisa mais de merge manual)
 async function syncFromGas(silent=false){
-  if(!GAS_URL) return;
   try{
-    const isEmpty = allTxns.length === 0;
-
-    if(isEmpty){
-      // Local vazio — puxa TODOS os anos do Sheets
-      if(!silent) showToast('Conectando ao Google Sheets...', false, true);
-      const stats = await gasStats();
-      if(!stats || stats.error || !stats.by_year){
-        if(!silent) showToast('Sheets não respondeu.', true);
-        return;
-      }
-      const years = Object.keys(stats.by_year).map(Number).filter(y=>y>=2025);
-      if(years.length === 0){
-        if(!silent) showToast('Nenhum dado encontrado no Sheets.', false, true);
-        return;
-      }
-      let allPulled = [];
-      for(const y of years){
-        const data = await gasRead(y);
-        if(data && data.txns && Array.isArray(data.txns)){
-          allPulled = [...allPulled, ...data.txns];
-        }
-      }
-      if(allPulled.length > 0){
-        allTxns = allPulled;
-        lsSave();
-        renderNav();
-        renderMain();
-        if(!silent) showToast('✓ '+allTxns.length+' lançamentos carregados do Sheets!');
-      } else {
-        if(!silent) showToast('Sheets não retornou dados.', false, true);
-      }
-      return;
-    }
-
-    // ── TEM DADOS LOCAIS: faz MERGE de verdade ──
-    // 1) Envia os lançamentos locais via merge (o servidor junta sem apagar o do outro)
-    // 2) Lê de volta o estado mesclado e adota como verdade (une por id, sem perder nada)
-    const localByYear = {};
-    allTxns.forEach(t=>{
-      const y = t.year || currentYear;
-      if(!localByYear[y]) localByYear[y]=[];
-      localByYear[y].push(t);
-    });
-
-    // Descobre todos os anos relevantes (locais + os que existem no Sheets)
-    const stats = await gasStats();
-    const sheetYears = (stats && stats.by_year) ? Object.keys(stats.by_year).map(Number) : [];
-    const years = [...new Set([...Object.keys(localByYear).map(Number), ...sheetYears])].filter(y=>y>=2025);
-
-    // 1) Push merge dos locais, ano a ano
-    for(const y of Object.keys(localByYear)){
-      await gasMergeTxns(parseInt(y), localByYear[y]);
-    }
-
-    // Pequena espera para o servidor consolidar a escrita antes de reler
-    await new Promise(r=>setTimeout(r, 900));
-
-    // 2) Pull do estado consolidado e une por id com o local
-    const byId = {};
-    allTxns.forEach(t=>{ if(t && t.id!=null) byId[t.id]=t; });
-    for(const y of years){
-      const data = await gasRead(y);
-      const sheetTxns = (data && data.txns) ? data.txns : [];
-      sheetTxns.forEach(t=>{ if(t && t.id!=null) byId[t.id]=t; });
-    }
-    const merged = Object.keys(byId).map(k=>byId[k]);
-
-    const changed = merged.length !== allTxns.length;
-    allTxns = merged;
-    lsSave();
+    if(!silent) showToast('Sincronizando...', false, true);
+    const ok = await loadTxnsFromSupabase();
     renderNav();
     renderMain();
     if(!silent){
-      showToast('✓ Sincronizado — '+allTxns.length+' lançamentos no total.');
+      if(ok) showToast('✓ Sincronizado — '+allTxns.length+' lançamentos no total.');
+      else showToast('Não foi possível conectar ao banco — mostrando dados salvos neste dispositivo.', true);
     }
   }catch(e){
     if(!silent) showToast('Erro de sincronização: '+e.message, true);
@@ -855,9 +811,8 @@ async function manualSync(){
 }
 
 async function forcePushAll(){
-  if(!GAS_URL){ showToast('Google Sheets não configurado.', true); return; }
   if(allTxns.length===0){ showToast('Nenhum dado local para enviar.', false, true); return; }
-  showToast('Enviando '+allTxns.length+' lançamentos ao Sheets...', false, true);
+  showToast('Enviando '+allTxns.length+' lançamentos ao banco...', false, true);
   try{
     // Agrupa todos os lançamentos por ano+mês e envia
     const byYear = {};
@@ -874,8 +829,8 @@ async function forcePushAll(){
       const res = await gasWriteMonths(parseInt(y), byYear[y]);
       if(!res) ok = false;
     }
-    if(ok) showToast('✓ '+allTxns.length+' lançamentos enviados ao Sheets ('+years.length+' ano(s))!');
-    else showToast('Envio parcial — verifique o Sheets.', false, true);
+    if(ok) showToast('✓ '+allTxns.length+' lançamentos enviados ao banco ('+years.length+' ano(s))!');
+    else showToast('Envio parcial — tente novamente em instantes.', false, true);
   }catch(e){ showToast('Erro ao enviar: '+e.message, true); }
 }
 
@@ -1203,10 +1158,15 @@ function renderImport(){
   const srcOpts=SOURCES.map(s=>`<option value="${s.id}">${s.label}</option>`).join('');
   return `
   <div class="tab-content">
-    ${!GAS_URL?`<div class="warn-box"><svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-      Google Sheets não configurado — dados ficam apenas neste navegador.
-      <button onclick="document.getElementById('gasModal').classList.add('open')" style="background:none;border:none;color:var(--yellow);text-decoration:underline;cursor:pointer;font-size:11px;margin-left:auto">Configurar agora</button>
-    </div>`:''}
+
+    <!-- MIGRAÇÃO ÚNICA: backup Excel → banco novo (Supabase) -->
+    <div class="section-card" style="border-color:var(--orange)">
+      <div class="section-hdr">📥 Migrar backup para o banco novo</div>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.6">
+        Use isso só uma vez: selecione o arquivo de backup em Excel (gerado pelo botão "⬇ Excel" no topo) para importar todo o histórico para o novo banco de dados.
+      </p>
+      <input type="file" accept=".xlsx,.xls" id="migrateFileInput" onchange="migrateBackupToSupabase(this.files[0])"/>
+    </div>
 
     <!-- LANÇAMENTO MANUAL -->
     <div class="section-card">
@@ -1480,6 +1440,61 @@ function dtToDisplay(isoDate){
 }
 
 // ═══════════════════════════════════════════════════════════════════
+// MIGRAÇÃO ÚNICA: backup Excel (aba "Lançamentos") → Supabase
+// ═══════════════════════════════════════════════════════════════════
+function migrateBackupToSupabase(file){
+  if(!file) return;
+  if(!confirm('Importar todos os lançamentos desse backup para o banco agora?')) return;
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    try{
+      const wb = XLSX.read(e.target.result, {type:'array'});
+      const ws = wb.Sheets['Lançamentos'];
+      if(!ws){ showToast('Aba "Lançamentos" não encontrada nesse arquivo.', true); return; }
+      const rows = XLSX.utils.sheet_to_json(ws);
+      if(!rows.length){ showToast('Nenhum lançamento encontrado no arquivo.', true); return; }
+
+      const parsed = rows.map(r => {
+        const mesIdx = MESES_FULL.indexOf(r['Mês']);
+        return mkTxn(
+          String(r['Data']||''),
+          String(r['Descrição']||''),
+          parseFloat(r['Valor'])||0,
+          r['Tipo']==='Entrada' ? 'entrada' : 'saida',
+          (r['Categoria']&&r['Categoria']!=='(sem categoria)') ? r['Categoria'] : '',
+          r['Origem']||'',
+          mesIdx>=0 ? mesIdx : 0,
+          parseInt(r['Ano'])||currentYear
+        );
+      });
+
+      showToast(`Enviando ${parsed.length} lançamentos ao banco...`, false, true);
+
+      // Envia em lotes para não estourar o tamanho de uma única requisição
+      const CHUNK = 400;
+      let sent = 0, failed = false;
+      for(let i=0; i<parsed.length; i+=CHUNK){
+        const batch = parsed.slice(i, i+CHUNK);
+        const ok = await gasWrite(batch);
+        if(!ok){ failed = true; break; }
+        sent += batch.length;
+      }
+
+      if(failed){
+        showToast(`Enviados ${sent} de ${parsed.length} — ocorreu um erro, tente novamente para completar.`, true);
+      }else{
+        showToast(`✓ Migração concluída — ${sent} lançamentos no banco!`);
+      }
+      await syncFromGas(true);
+    }catch(err){
+      console.error('migrateBackupToSupabase error:', err);
+      showToast('Erro ao importar o backup: '+err.message, true);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// ═══════════════════════════════════════════════════════════════════
 // FILE IMPORT HANDLER
 // ═══════════════════════════════════════════════════════════════════
 function handleFileInput(file){
@@ -1617,7 +1632,7 @@ async function confirmImport(){
       byYear[y].push(t);
     });
     Promise.all(Object.entries(byYear).map(([y,list])=>gasMergeTxns(parseInt(y),list)))
-      .then(results=>{ if(results.every(Boolean)) showToast('Salvo no Google Sheets ✓'); else showToast('Salvo localmente (Sheets parcial)',false,true); });
+      .then(results=>{ if(results.every(Boolean)) showToast('Salvo no banco ✓'); else showToast('Salvo localmente (envio parcial ao banco)',false,true); });
   }
   selMonth=pendingTxns[0]?.month??selMonth;
   pendingTxns=[];pendingEditCats={};
@@ -2130,7 +2145,7 @@ function showToast(msg,isErr=false,isWarn=false){
 // ═══════════════════════════════════════════════════════════════════
 // CLOSE MODALS ON BACKDROP CLICK
 // ═══════════════════════════════════════════════════════════════════
-['dupModal','editModal','confirmModal','gasModal','fornEditModal'].forEach(id=>{
+['dupModal','editModal','confirmModal','fornEditModal'].forEach(id=>{
   document.getElementById(id).addEventListener('click',function(e){if(e.target===this)this.classList.remove('open');});
 });
 
@@ -2571,52 +2586,61 @@ function checkMonthMismatch(txns, mesIdx){
 // ═══════════════════════════════════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════════════════════════════════
-lsLoad();
-// Remove dados de 2023 para trás
-const beforePurge = allTxns.length;
-allTxns = allTxns.filter(t => t.year >= 2025);
-if(allTxns.length !== beforePurge){ lsSave(); }
-
-// Repara lançamentos sem year (bug anterior)
-let _repaired = 0;
-allTxns = allTxns.map(t => {
-  if(t.year === undefined || t.year === null) {
-    const parts = (t.date||'').split('/');
-    const inferredYear = parts.length===3 ? parseInt(parts[2]) : 2026;
-    _repaired++;
-    return {...t, year: isNaN(inferredYear) ? 2026 : inferredYear};
-  }
-  return t;
-});
-// Repara categorias neutras que estavam em despesas (Pix Interna, Aplicação Financeira)
+// Repara categorias neutras que estavam em despesas (Pix Interna, Aplicação Financeira) — usado no b12Start() abaixo
 const PIX_PATTERNS = ['arena b12','gr becker','becker eventos','gustavo becker','08561701','pix interna'];
 const APLIC_PATTERNS = ['aplicacao','aplicação','resgate','firf','cdb','tesouro'];
-let _fixedCat = 0;
-allTxns = allTxns.map(t => {
-  const dl = (t.desc||'').toLowerCase();
-  if(t.category === 'Outras Despesas' || t.category === 'Outras Receitas') {
-    if(PIX_PATTERNS.some(p => dl.includes(p))) {
-      _fixedCat++;
-      return {...t, category:'Pix Interna'};
+
+async function b12Start(){
+  await loadTxnsFromSupabase();
+
+  const beforePurge = allTxns.length;
+  allTxns = allTxns.filter(t => t.year >= 2025);
+  if(allTxns.length !== beforePurge){ lsSave(); }
+
+  // Repara lançamentos sem year (bug anterior)
+  let _repaired = 0;
+  allTxns = allTxns.map(t => {
+    if(t.year === undefined || t.year === null) {
+      const parts = (t.date||'').split('/');
+      const inferredYear = parts.length===3 ? parseInt(parts[2]) : 2026;
+      _repaired++;
+      return {...t, year: isNaN(inferredYear) ? 2026 : inferredYear};
     }
-    if(APLIC_PATTERNS.some(p => dl.includes(p))) {
-      _fixedCat++;
-      return {...t, category:'Aplicação Financeira'};
+    return t;
+  });
+  let _fixedCat = 0;
+  allTxns = allTxns.map(t => {
+    const dl = (t.desc||'').toLowerCase();
+    if(t.category === 'Outras Despesas' || t.category === 'Outras Receitas') {
+      if(PIX_PATTERNS.some(p => dl.includes(p))) {
+        _fixedCat++;
+        return {...t, category:'Pix Interna'};
+      }
+      if(APLIC_PATTERNS.some(p => dl.includes(p))) {
+        _fixedCat++;
+        return {...t, category:'Aplicação Financeira'};
+      }
     }
-  }
-  return t;
-});
-if(_repaired > 0 || _fixedCat > 0){ lsSave(); }
-loadLogs();
-loadFornecedores();
-selMonth=new Date().getMonth();
-setTab('dashboard');
-if(GAS_URL){
-  // Sempre sincroniza via merge: envia os locais sem apagar o do outro e puxa o consolidado.
-  // Funciona tanto com dados locais quanto sem (syncFromGas trata os dois casos).
-  syncFromGas(true);
+    return t;
+  });
+  if(_repaired > 0 || _fixedCat > 0){ lsSave(); }
+  loadLogs();
+  loadFornecedores();
+  selMonth=new Date().getMonth();
+  setTab('dashboard');
+  addLog('SISTEMA', `Dashboard iniciado — ${new Date().toLocaleDateString('pt-BR')}`, false);
 }
-addLog('SISTEMA', `Dashboard iniciado — ${new Date().toLocaleDateString('pt-BR')}`, false);
+window.b12Start = b12Start;
+
+// Se já existe uma sessão válida (login anterior), pula a tela de login direto
+(async function(){
+  const { data: { session } } = await supa.auth.getSession();
+  if(session){
+    const el = document.getElementById('b12LoginScreen');
+    if(el) el.style.display='none';
+    b12Start();
+  }
+})();
 </script>
 <script>
 if("serviceWorker" in navigator){

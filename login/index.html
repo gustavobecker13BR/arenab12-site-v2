@@ -1159,14 +1159,15 @@ function renderImport(){
   return `
   <div class="tab-content">
 
-    <!-- MIGRAÇÃO ÚNICA: backup Excel → banco novo (Supabase) -->
+    <!-- MIGRAÇÃO ÚNICA: backup Excel → banco novo (Supabase) — some sozinho assim que houver dados no banco -->
+    ${allTxns.length===0?`
     <div class="section-card" style="border-color:var(--orange)">
       <div class="section-hdr">📥 Migrar backup para o banco novo</div>
       <p style="font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.6">
-        Use isso só uma vez: selecione o arquivo de backup em Excel (gerado pelo botão "⬇ Excel" no topo) para importar todo o histórico para o novo banco de dados.
+        Banco ainda vazio — selecione o arquivo de backup em Excel (gerado pelo botão "⬇ Excel" no topo) para importar todo o histórico. Esse aviso some sozinho depois que a migração for feita.
       </p>
       <input type="file" accept=".xlsx,.xls" id="migrateFileInput" onchange="migrateBackupToSupabase(this.files[0])"/>
-    </div>
+    </div>`:''}
 
     <!-- LANÇAMENTO MANUAL -->
     <div class="section-card">

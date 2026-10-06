@@ -340,8 +340,8 @@ th button svg{width:9px;height:9px;stroke:currentColor;fill:none;stroke-width:2}
   .pr-kpi .v.o{color:#c24700}
   .pr-section-title{font-size:11px;letter-spacing:1.5px;color:#444;font-weight:700;margin:16px 0 6px}
   .pr-table{width:100%;border-collapse:collapse;font-size:10px;margin-bottom:10px}
-  .pr-table th{text-align:left;font-size:9px;letter-spacing:.5px;color:#666;border-bottom:1.5px solid #333;padding:5px 6px;font-weight:700}
-  .pr-table td{padding:4px 6px;border-bottom:1px solid #eee}
+  .pr-table th{text-align:left;font-size:9px;letter-spacing:.5px;color:#666;background:#fff;border-bottom:1.5px solid #333;padding:5px 6px;font-weight:700}
+  .pr-table td{padding:4px 6px;border-bottom:1px solid #eee;color:#111;background:#fff}
   .pr-table td.num,.pr-table th.num{text-align:right;white-space:nowrap}
   .pr-table tr.tot td{font-weight:700;border-top:1.5px solid #333;border-bottom:none}
   .pr-table tr.sec td{font-weight:700;background:#f5f5f5}
@@ -587,7 +587,7 @@ function txnToRow(t){
 function rowToTxn(r){
   return {
     id: r.id,
-    date: r.date,
+    date: cleanDate(r.date),
     desc: r.description,
     value: r.value,
     type: r.type,
@@ -1432,12 +1432,21 @@ function catFromFornecedor(desc){
 }
 
 function mkTxn(date,desc,value,type,category,source,month,year){
-  return {id:nextId(),date,desc,value:Math.round(value*100)/100,type,category,source,month,year:year||currentYear};
+  return {id:nextId(),date:cleanDate(date),desc,value:Math.round(value*100)/100,type,category,source,month,year:year||currentYear};
 }
 function pad(n){return String(n).padStart(2,'0')}
 function dtToDisplay(isoDate){
   const p=isoDate.split('-');
   return `${p[2]}/${p[1]}/${p[0]}`;
+}
+// Corrige datas corrompidas por um bug antigo que gravava "undefined/undefined/DD/MM/AAAA"
+// no banco (ex: dtToDisplay rodando em cima de uma data que já estava em DD/MM/AAAA).
+// Se a string já terminar em DD/MM/AAAA válido, usa só essa parte; senão devolve como veio.
+function cleanDate(d){
+  if(!d) return d;
+  const s=String(d);
+  const m=s.match(/(\d{2}\/\d{2}\/\d{4})$/);
+  return m ? m[1] : s;
 }
 
 // ═══════════════════════════════════════════════════════════════════

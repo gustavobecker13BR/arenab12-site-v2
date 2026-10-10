@@ -1045,13 +1045,13 @@ function renderDash(){
   const uncatN=monthTxns.filter(t=>!t.category).length;
 
   const kpis=[
-    {l:'ENTROU',v:fmtK(s.totalIn),c:'g'},
-    {l:'SAIU',v:fmtK(s.totalOut),c:'r'},
-    {l:'SOBROU',v:(s.lucro>=0?'':'-')+fmtK(Math.abs(s.lucro)),c:lucroColor},
+    {l:'RECEITA TOTAL',v:fmtK(s.totalIn),c:'g'},
+    {l:'DESPESA TOTAL',v:fmtK(s.totalOut),c:'r'},
+    {l:'LUCRO TOTAL',v:(s.lucro>=0?'':'-')+fmtK(Math.abs(s.lucro)),c:lucroColor},
     {l:'BAR',v:fmtK(s.bar),c:'o'},
     {l:'QUADRAS',v:s.quadra>0?fmtK(s.quadra):'—',c:'b'},
     {l:'MARGEM BRUTA',v:s.totalIn>0?fmtPct(s.mb):'—',c:mbColor},
-    {l:'SOBRA / ENTROU',v:s.totalIn>0?fmtPct(s.ml):'—',c:mlColor},
+    {l:'LUCRO / RECEITA',v:s.totalIn>0?fmtPct(s.ml):'—',c:mlColor},
     {l:'BAR / QUADRA',v:s.quadra>0?s.coefBarLoc.toFixed(2)+'x':'—',c:'w'},
   ];
 
@@ -1071,14 +1071,14 @@ function renderDash(){
   </div>
   <div class="charts-grid">
     <div class="chart-panel">
-      <div class="panel-hdr"><span class="panel-hdr-icon">◎</span><span class="panel-hdr-title">ENTRADAS — ${mes}</span></div>
+      <div class="panel-hdr"><span class="panel-hdr-icon">◎</span><span class="panel-hdr-title">RECEITAS — ${mes}</span></div>
       <div class="donut-wrap">
         <canvas id="chartRec" width="180" height="180" style="flex-shrink:0" role="img" aria-label="Donut receitas"></canvas>
         <div class="legend" id="legendRec"></div>
       </div>
     </div>
     <div class="chart-panel">
-      <div class="panel-hdr"><span class="panel-hdr-icon">◎</span><span class="panel-hdr-title">SAÍDAS — ${mes}</span></div>
+      <div class="panel-hdr"><span class="panel-hdr-icon">◎</span><span class="panel-hdr-title">DESPESAS — ${mes}</span></div>
       <div class="donut-wrap">
         <canvas id="chartExp" width="180" height="180" style="flex-shrink:0" role="img" aria-label="Donut despesas"></canvas>
         <div class="legend" id="legendExp"></div>
@@ -1107,8 +1107,8 @@ function renderDash(){
   <div class="insights-strip">
     ${s.coefEstoqueBar>0?`<div class="insight">Custo estoque / Bar: <b class="${s.coefEstoqueBar>0.7?'r':'g'}">${fmtPct(s.coefEstoqueBar)}</b>${s.coefEstoqueBar>0.7?' ⚠':''}</div>`:'<div class="insight">—</div>'}
     <div class="insight">Bar vs Quadras: <b>${s.quadra>0?s.coefBarLoc.toFixed(2)+'x':'—'}</b></div>
-    <div class="insight">Despesas fixas / Entradas: <b class="${s.expense['Despesas Fixas']/s.totalIn>0.3?'r':'g'}">${s.expense['Despesas Fixas']>0?fmtPct(s.expense['Despesas Fixas']/s.totalIn):'—'}</b></div>
-    <div class="insight">Retirada dos sócios / Entradas: <b>${s.expense['Retirada dos Sócios']>0?fmtPct(s.expense['Retirada dos Sócios']/s.totalIn):'—'}</b></div>
+    <div class="insight">Despesas fixas / Receita: <b class="${s.expense['Despesas Fixas']/s.totalIn>0.3?'r':'g'}">${s.expense['Despesas Fixas']>0?fmtPct(s.expense['Despesas Fixas']/s.totalIn):'—'}</b></div>
+    <div class="insight">Retirada dos sócios / Receita: <b>${s.expense['Retirada dos Sócios']>0?fmtPct(s.expense['Retirada dos Sócios']/s.totalIn):'—'}</b></div>
   </div>`:''}
 
   <div class="analytics-section">
@@ -1929,7 +1929,7 @@ function toggleSort(k){
 // o backup Excel e o relatório PDF anual, para não divergirem entre si.
 function dreRowDefs(){
   return [
-    {l:'1. ENTROU',k:'totalIn',sec:true,c:'var(--green)'},
+    {l:'1. RECEITA TOTAL',k:'totalIn',sec:true,c:'var(--green)'},
     {l:'1.1 Loc. Quadra 1',k:'income.Locação Quadra 1'},
     {l:'1.2 Loc. Quadra 2',k:'income.Locação Quadra 2'},
     {l:'1.3 Loc. Quadra Areia',k:'income.Locação Quadra Areia'},
@@ -1937,14 +1937,14 @@ function dreRowDefs(){
     {l:'1.5 Receita Alimentos',k:'income.Receita Alimentos'},
     {l:'1.6 Outras Receitas',k:'income.Outras Receitas'},
     {l:'1.7 Entrada de Caixa',k:'income.Entrada de Caixa'},
-    {l:'2. SAIU',k:'totalOut',sec:true,c:'var(--red)'},
+    {l:'2. DESPESA TOTAL',k:'totalOut',sec:true,c:'var(--red)'},
     {l:'2.1 Estoque',k:'expense.Estoque'},
     {l:'2.2 Despesas Fixas',k:'expense.Despesas Fixas'},
     {l:'2.3 Despesas Variáveis',k:'expense.Despesas Variáveis'},
     {l:'2.4 Investimentos e Empréstimo',k:'expense.Investimentos e Empréstimo'},
     {l:'2.5 Retirada dos Sócios',k:'expense.Retirada dos Sócios'},
-    {l:'SOBROU',k:'lucro',sec:true,c:'var(--orange)'},
-    {l:'Sobra / Entrou %',k:'ml',pct:true},
+    {l:'LUCRO TOTAL',k:'lucro',sec:true,c:'var(--orange)'},
+    {l:'Lucro / Receita %',k:'ml',pct:true},
   ];
 }
 function dreGetV(s,k){
@@ -2078,10 +2078,10 @@ function printMensal(){
   const mesFull = MESES_FULL[selMonth];
 
   const kpis = [
-    {l:'ENTROU', v:fmtK(s.totalIn), c:'g'},
-    {l:'SAIU', v:fmtK(s.totalOut), c:'r'},
-    {l:'SOBROU', v:(s.lucro>=0?'':'-')+fmtK(Math.abs(s.lucro)), c:s.lucro>=0?'g':'r'},
-    {l:'SOBRA / ENTROU', v:s.totalIn>0?fmtPct(s.ml):'—', c:s.ml>=0?'g':'r'},
+    {l:'RECEITA TOTAL', v:fmtK(s.totalIn), c:'g'},
+    {l:'DESPESA TOTAL', v:fmtK(s.totalOut), c:'r'},
+    {l:'LUCRO TOTAL', v:(s.lucro>=0?'':'-')+fmtK(Math.abs(s.lucro)), c:s.lucro>=0?'g':'r'},
+    {l:'LUCRO / RECEITA', v:s.totalIn>0?fmtPct(s.ml):'—', c:s.ml>=0?'g':'r'},
   ];
 
   const receitasRows = INCOME_CATS.filter(c=>s.income[c]).map(c=>
@@ -2110,15 +2110,15 @@ function printMensal(){
     <div class="pr-kpis">
       ${kpis.map(k=>`<div class="pr-kpi"><div class="l">${k.l}</div><div class="v ${k.c}">${k.v}</div></div>`).join('')}
     </div>
-    <div class="pr-section-title">ENTRADAS</div>
+    <div class="pr-section-title">RECEITAS</div>
     <table class="pr-table"><thead><tr><th>Categoria</th><th class="num">Valor</th></tr></thead>
       <tbody>${receitasRows||'<tr><td colspan="2">Sem receitas no período</td></tr>'}
-      <tr class="tot"><td>TOTAL QUE ENTROU</td><td class="num">${fmtK(s.totalIn)}</td></tr></tbody>
+      <tr class="tot"><td>RECEITA TOTAL</td><td class="num">${fmtK(s.totalIn)}</td></tr></tbody>
     </table>
-    <div class="pr-section-title">SAÍDAS</div>
+    <div class="pr-section-title">DESPESAS</div>
     <table class="pr-table"><thead><tr><th>Categoria</th><th class="num">Valor</th></tr></thead>
       <tbody>${despesasRows||'<tr><td colspan="2">Sem despesas no período</td></tr>'}
-      <tr class="tot"><td>TOTAL QUE SAIU</td><td class="num">${fmtK(s.totalOut)}</td></tr></tbody>
+      <tr class="tot"><td>DESPESA TOTAL</td><td class="num">${fmtK(s.totalOut)}</td></tr></tbody>
     </table>
     <div class="pr-section-title">EXTRATO DO MÊS (${txns.length} lançamentos)</div>
     <table class="pr-table"><thead><tr><th>Data</th><th>Descrição</th><th>Categoria</th><th>Tipo</th><th>Origem</th><th class="num">Valor</th></tr></thead>

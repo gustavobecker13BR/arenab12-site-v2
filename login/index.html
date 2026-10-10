@@ -604,9 +604,18 @@ const MESES_SHORT = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out'
 const MESES_FULL  = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 
 const INCOME_CATS = ['Locação Quadra 1','Locação Quadra 2','Locação Quadra Areia','Receita Bebidas','Receita Alimentos','Outras Receitas','Entrada de Caixa'];
-const EXPENSE_CATS = ['Retirada G','Retirada R','Pagamento de Contas','Reposição de Estoque - Bebidas','Reposição de Estoque - Alimentos','Reposição de Estoque - Outros','Investimentos','Outras Despesas','Manutenção Quadras','Serviços Terceiros','Contabilidade','Impostos e Taxas','Folha de Pagamento','Marketing'];
+const EXPENSE_CATS = ['Retirada G','Retirada R','Pagamento de Contas','Reposição de Estoque','Investimentos','Outras Despesas','Manutenção Quadras','Serviços Terceiros','Contabilidade','Impostos e Taxas','Folha de Pagamento','Marketing'];
 const NEUTRAL_CATS = ['Pix Interna','Aplicação Financeira'];
 const ALL_CATS = [...INCOME_CATS, ...EXPENSE_CATS];
+// Estoque nas DESPESAS virou uma categoria única (as receitas continuam separadas em Bebidas/Alimentos).
+// Lançamentos antigos com as categorias divididas são convertidos ao carregar e regravados no banco.
+const ESTOQUE_CAT = 'Reposição de Estoque';
+const LEGACY_CAT_MAP = {
+  'Reposição de Estoque - Bebidas': ESTOQUE_CAT,
+  'Reposição de Estoque - Alimentos': ESTOQUE_CAT,
+  'Reposição de Estoque - Outros': ESTOQUE_CAT,
+};
+function normCat(c){ return (c && LEGACY_CAT_MAP[c]) || c; }
 
 const CHART_COLORS = ['#FF620B','#4fc3f7','#00e676','#ffcc02','#f06292','#81c784','#4db6ac','#ff8a65','#ba68c8','#a1887f'];
 
@@ -632,7 +641,7 @@ let dupCallback = {onContinue:null, onReplace:null};
 let chartRec=null, chartExp=null;
 let GAS_URL = 'supabase'; // sentinel sempre "ligado" — o backend real agora é o Supabase (ver funções gas* abaixo), mantido com esse nome só para não precisar editar todos os pontos que checam "if(GAS_URL)"
 let customMap = {};
-try{customMap=JSON.parse(localStorage.getItem('arenab12_customMap')||'{}')}catch(e){}
+try{customMap=JSON.parse(localStorage.getItem('arenab12_customMap')||'{}'); Object.keys(customMap).forEach(k=>{customMap[k]=normCat(customMap[k]);});}catch(e){}
 
 // Sort state for lancamentos
 let sortKey='date', sortDir='asc';
@@ -676,7 +685,7 @@ function rowToTxn(r){
     desc: r.description,
     value: r.value,
     type: r.type,
-    category: r.category,
+    category: normCat(r.category),
     source: r.source,
     month: r.month,
     year: r.year,
@@ -755,6 +764,18 @@ async function loadTxnsFromSupabase(){
     if(error) throw error;
     allTxns = (data||[]).map(rowToTxn);
     lsSave();
+    // Migração única: regrava no banco os lançamentos que ainda estavam com categoria antiga
+    // (ex.: "Reposição de Estoque - Bebidas" → "Reposição de Estoque"). Nas próximas cargas não sobra nada.
+    const legacyIds = new Set((data||[]).filter(r=>r.category && LEGACY_CAT_MAP[r.category]).map(r=>String(r.id)));
+    if(legacyIds.size>0){
+      const toFix = allTxns.filter(t=>legacyIds.has(String(t.id)));
+      (async()=>{
+        let ok = true;
+        for(let i=0; i<toFix.length && ok; i+=400) ok = await gasWrite(toFix.slice(i,i+400));
+        if(ok) addLog('MIGRAÇÃO', `${toFix.length} lançamentos de estoque unificados em "${ESTOQUE_CAT}"`, false);
+        else console.warn('Migração de categorias de estoque falhou — será tentada de novo na próxima carga.');
+      })();
+    }
     return true;
   }catch(e){
     console.error('loadTxnsFromSupabase error:', e);
@@ -791,7 +812,7 @@ function lsSaveAndSync(affectedYear, affectedMonth){
 function lsLoad(){
   try{
     const d=localStorage.getItem(lsKey());
-    if(d) allTxns=JSON.parse(d);
+    if(d){ allTxns=JSON.parse(d); allTxns.forEach(t=>{ t.category=normCat(t.category); }); }
     else {
       // migrate old per-year keys
       let migrated=[];
@@ -815,7 +836,7 @@ function computeSummary(txns){
   EXPENSE_CATS.forEach(c=>expense[c]=0);
   let totalIn=0, totalOut=0;
   txns.forEach(t=>{
-    const v=t.value||0, c=t.category||'';
+    const v=t.value||0, c=normCat(t.category)||'';
     if(t.type==='entrada'&&!NEUTRAL_CATS.includes(c)){
       income[c]=(income[c]||0)+v; totalIn+=v;
     } else if(t.type==='saida'&&!NEUTRAL_CATS.includes(c)){
@@ -825,10 +846,10 @@ function computeSummary(txns){
   const bar = (income['Receita Bebidas']||0)+(income['Receita Alimentos']||0);
   const quadra = (income['Locação Quadra 1']||0)+(income['Locação Quadra 2']||0)+(income['Locação Quadra Areia']||0);
   const lucro = totalIn-totalOut;
-  const mb = totalIn>0?(totalIn-(expense['Reposição de Estoque - Bebidas']||0)-(expense['Reposição de Estoque - Alimentos']||0)-(expense['Reposição de Estoque - Outros']||0))/totalIn:0;
+  const mb = totalIn>0?(totalIn-(expense[ESTOQUE_CAT]||0))/totalIn:0;
   const ml = totalIn>0?lucro/totalIn:0;
   const coefBarLoc = quadra>0?bar/quadra:0;
-  const estoqueTotal=(expense['Reposição de Estoque - Bebidas']||0)+(expense['Reposição de Estoque - Alimentos']||0)+(expense['Reposição de Estoque - Outros']||0);
+  const estoqueTotal=expense[ESTOQUE_CAT]||0;
   const coefEstoqueBar = bar>0?estoqueTotal/bar:0;
   return {income,expense,totalIn,totalOut,bar,quadra,lucro,mb,ml,coefBarLoc,coefEstoqueBar};
 }
@@ -1102,7 +1123,7 @@ function drawDashCharts(){
     const chart=new Chart(c,{type:'doughnut',data:{labels,datasets:[{data:vals,backgroundColor:colors,borderWidth:0}]},options:{responsive:false,plugins:{legend:{display:false}},cutout:'66%'}});
     lg.innerHTML=entries.filter(e=>e.v>0).map((e,i)=>{
       const bg=CHART_COLORS[i%CHART_COLORS.length];
-      const nm=e.l.replace('Locação ','').replace('Receita ','').replace('Reposição de Estoque - ','Est.').replace(' de Pagamento','');
+      const nm=e.l.replace('Locação ','').replace('Receita ','').replace('Reposição de Estoque','Estoque').replace(' de Pagamento','');
       return '<div class="legend-row"><span class="ldot" style="background:'+bg+'"></span><span class="lname">'+nm+'</span><span class="lval">'+fmtK(e.v)+'</span></div>';
     }).join('');
     return chart;
@@ -1500,10 +1521,8 @@ function parsePagSeguro(wb, mesIdx){
 }
 
 function categorizeDebito(dl){
-  if(dl.includes('atacadist')||dl.includes('dist')||dl.includes('aliment')) return 'Reposição de Estoque - Alimentos';
-  if(dl.includes('bebid')||dl.includes('drink')) return 'Reposição de Estoque - Bebidas';
   if(dl.includes('posto')||dl.includes('combus')) return 'Outras Despesas';
-  return 'Reposição de Estoque - Outros';
+  return ESTOQUE_CAT;
 }
 
 // Busca categoria pelo nome do fornecedor cadastrado
@@ -1519,7 +1538,7 @@ function catFromFornecedor(desc){
 }
 
 function mkTxn(date,desc,value,type,category,source,month,year){
-  return {id:nextId(),date:cleanDate(date),desc,value:Math.round(value*100)/100,type,category,source,month,year:year||currentYear};
+  return {id:nextId(),date:cleanDate(date),desc,value:Math.round(value*100)/100,type,category:normCat(category),source,month,year:year||currentYear};
 }
 function pad(n){return String(n).padStart(2,'0')}
 function dtToDisplay(isoDate){
@@ -1864,17 +1883,15 @@ function dreRowDefs(){
     {l:'2.1 Retiradas G',k:'expense.Retirada G'},
     {l:'2.2 Retiradas R',k:'expense.Retirada R'},
     {l:'2.3 Pgto Contas',k:'expense.Pagamento de Contas'},
-    {l:'2.4 Est. Bebidas',k:'expense.Reposição de Estoque - Bebidas'},
-    {l:'2.5 Est. Alimentos',k:'expense.Reposição de Estoque - Alimentos'},
-    {l:'2.6 Est. Outros',k:'expense.Reposição de Estoque - Outros'},
-    {l:'2.7 Investimentos',k:'expense.Investimentos'},
-    {l:'2.8 Outras Despesas',k:'expense.Outras Despesas'},
-    {l:'2.9 Manutenção',k:'expense.Manutenção Quadras'},
-    {l:'2.10 Serv. Terceiros',k:'expense.Serviços Terceiros'},
-    {l:'2.11 Contabilidade',k:'expense.Contabilidade'},
-    {l:'2.12 Impostos',k:'expense.Impostos e Taxas'},
-    {l:'2.13 Folha',k:'expense.Folha de Pagamento'},
-    {l:'2.14 Marketing',k:'expense.Marketing'},
+    {l:'2.4 Estoque',k:'expense.Reposição de Estoque'},
+    {l:'2.5 Investimentos',k:'expense.Investimentos'},
+    {l:'2.6 Outras Despesas',k:'expense.Outras Despesas'},
+    {l:'2.7 Manutenção',k:'expense.Manutenção Quadras'},
+    {l:'2.8 Serv. Terceiros',k:'expense.Serviços Terceiros'},
+    {l:'2.9 Contabilidade',k:'expense.Contabilidade'},
+    {l:'2.10 Impostos',k:'expense.Impostos e Taxas'},
+    {l:'2.11 Folha',k:'expense.Folha de Pagamento'},
+    {l:'2.12 Marketing',k:'expense.Marketing'},
     {l:'RESULTADO',k:'lucro',sec:true,c:'var(--orange)'},
     {l:'Margem Líquida %',k:'ml',pct:true},
   ];
@@ -2253,25 +2270,25 @@ function showToast(msg,isErr=false,isWarn=false){
 // Fornecedores pré-cadastrados (trecho do nome → categoria)
 const FORNECEDORES_SEED = [
   // Estoque Bebidas
-  {nome:'AMBEV',          cat:'Reposição de Estoque - Bebidas'},
-  {nome:'HEINEKEN',       cat:'Reposição de Estoque - Bebidas'},
-  {nome:'COCA COLA',      cat:'Reposição de Estoque - Bebidas'},
-  {nome:'PEPSI',          cat:'Reposição de Estoque - Bebidas'},
-  {nome:'SKOL',           cat:'Reposição de Estoque - Bebidas'},
-  {nome:'BRAHMA',         cat:'Reposição de Estoque - Bebidas'},
-  {nome:'CERVEJARIA',     cat:'Reposição de Estoque - Bebidas'},
-  {nome:'BEBIDAS',        cat:'Reposição de Estoque - Bebidas'},
-  {nome:'DISTRIBUIDORA DE BEBIDAS', cat:'Reposição de Estoque - Bebidas'},
+  {nome:'AMBEV',          cat:'Reposição de Estoque'},
+  {nome:'HEINEKEN',       cat:'Reposição de Estoque'},
+  {nome:'COCA COLA',      cat:'Reposição de Estoque'},
+  {nome:'PEPSI',          cat:'Reposição de Estoque'},
+  {nome:'SKOL',           cat:'Reposição de Estoque'},
+  {nome:'BRAHMA',         cat:'Reposição de Estoque'},
+  {nome:'CERVEJARIA',     cat:'Reposição de Estoque'},
+  {nome:'BEBIDAS',        cat:'Reposição de Estoque'},
+  {nome:'DISTRIBUIDORA DE BEBIDAS', cat:'Reposição de Estoque'},
   // Estoque Alimentos
-  {nome:'DEQUECH',        cat:'Reposição de Estoque - Alimentos'},
-  {nome:'RINALDO FERREIRA',cat:'Reposição de Estoque - Alimentos'},
-  {nome:'INGLESES INDUSTRIA',cat:'Reposição de Estoque - Alimentos'},
-  {nome:'MILIUM',         cat:'Reposição de Estoque - Outros'},
-  {nome:'ATACADAO',       cat:'Reposição de Estoque - Alimentos'},
-  {nome:'MAKRO',          cat:'Reposição de Estoque - Alimentos'},
-  {nome:'ASSAI',          cat:'Reposição de Estoque - Alimentos'},
-  {nome:'DISTRIBUIDORA',  cat:'Reposição de Estoque - Alimentos'},
-  {nome:'ALIMENTOS',      cat:'Reposição de Estoque - Alimentos'},
+  {nome:'DEQUECH',        cat:'Reposição de Estoque'},
+  {nome:'RINALDO FERREIRA',cat:'Reposição de Estoque'},
+  {nome:'INGLESES INDUSTRIA',cat:'Reposição de Estoque'},
+  {nome:'MILIUM',         cat:'Reposição de Estoque'},
+  {nome:'ATACADAO',       cat:'Reposição de Estoque'},
+  {nome:'MAKRO',          cat:'Reposição de Estoque'},
+  {nome:'ASSAI',          cat:'Reposição de Estoque'},
+  {nome:'DISTRIBUIDORA',  cat:'Reposição de Estoque'},
+  {nome:'ALIMENTOS',      cat:'Reposição de Estoque'},
   // Folha
   {nome:'LUIZ FELIPE DA SILVA',    cat:'Folha de Pagamento'},
   {nome:'MARINA JARDIM',           cat:'Folha de Pagamento'},
@@ -2335,7 +2352,14 @@ let fornecedores = [];
 function loadFornecedores(){
   try{
     const saved = localStorage.getItem('arenab12_fornecedores');
-    if(saved){ fornecedores = JSON.parse(saved); }
+    if(saved){
+      fornecedores = JSON.parse(saved);
+      // Converte fornecedores cadastrados com as categorias antigas de estoque
+      if(fornecedores.some(f=>LEGACY_CAT_MAP[f.cat])){
+        fornecedores.forEach(f=>{ f.cat = normCat(f.cat); });
+        saveFornecedores();
+      }
+    }
     else { seedFornecedores(); }
   }catch(e){ seedFornecedores(); }
 }

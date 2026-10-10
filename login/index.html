@@ -567,7 +567,7 @@ window.b12Check = async function(){
 <div class="modal-backdrop" id="confirmModal">
   <div class="modal" onclick="event.stopPropagation()" style="max-width:420px">
     <h3 id="confirmTitle">⚠ Confirmar exclusão</h3>
-    <p id="confirmMsg" style="font-size:14px;color:#aaa;line-height:1.6;margin-bottom:18px"></p>
+    <p id="confirmMsg" style="font-size:14px;color:#aaa;line-height:1.6;margin-bottom:18px;white-space:pre-line;max-height:50vh;overflow-y:auto"></p>
     <div class="modal-footer">
       <button class="btn-outline" onclick="closeConfirmModal()">Cancelar</button>
       <button class="btn-primary" id="confirmOkBtn" style="background:var(--red)">🗑 Confirmar exclusão</button>
@@ -692,10 +692,27 @@ function rowToTxn(r){
   };
 }
 
+// O Supabase devolve no máximo ~1000 linhas por consulta. Sem paginar, tudo além disso
+// "sumia" da tela (os dados continuavam no banco). Aqui buscamos em páginas até acabar.
+async function selectAllTxns(year){
+  const PAGE = 1000;
+  let all = [];
+  for(let from = 0; ; ){
+    let q = supa.from('txns').select('*').order('id', {ascending:true}).range(from, from + PAGE - 1);
+    if(year) q = q.eq('year', year);
+    const { data, error } = await q;
+    if(error) throw error;
+    if(!data || data.length === 0) break;
+    all = all.concat(data);
+    from += data.length;          // avança pelo que veio (funciona mesmo se o limite do servidor for menor que PAGE)
+    if(from > 200000) break;      // trava de segurança
+  }
+  return all;
+}
+
 async function gasRead(year){
   try{
-    const { data, error } = await supa.from('txns').select('*').eq('year', year||currentYear);
-    if(error) throw error;
+    const data = await selectAllTxns(year||currentYear);
     return { txns: (data||[]).map(rowToTxn) };
   }catch(e){ console.error('gasRead error:', e); return null; }
 }
@@ -760,8 +777,7 @@ async function gasMergeTxns(year, txnsList, deletedIds){
 
 async function loadTxnsFromSupabase(){
   try{
-    const { data, error } = await supa.from('txns').select('*');
-    if(error) throw error;
+    const data = await selectAllTxns();
     allTxns = (data||[]).map(rowToTxn);
     lsSave();
     // Migração única: regrava no banco os lançamentos que ainda estavam com categoria antiga
@@ -1025,6 +1041,10 @@ function renderDash(){
   ${uncatN>0?`<div style="background:var(--red-bg);border-bottom:1px solid rgba(255,68,68,.2);padding:6px 20px;font-size:12px;color:var(--red);display:flex;align-items:center;gap:6px">
     ⚠ ${uncatN} lançamentos sem categoria em ${mesFull} — <button onclick="setTab('lancamentos')" style="background:none;border:none;color:var(--red);text-decoration:underline;cursor:pointer;font-size:10px">ver lançamentos</button>
   </div>`:''}
+  ${(()=>{const d=findImportDuplicates(currentYear);return d.extras.length>0?`<div style="background:rgba(255,193,7,.08);border-bottom:1px solid rgba(255,193,7,.25);padding:8px 20px;font-size:12px;color:var(--yellow);display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+    ⚠ ${d.extras.length} lançamentos parecem importados em duplicidade em ${currentYear} (${d.summary.map(x=>MESES_SHORT[x.month]+' '+x.source).join(', ')})
+    <button class="btn-outline" style="border-color:rgba(255,193,7,.4);color:var(--yellow);padding:4px 10px;font-size:11px" onclick="reviewDuplicates()">Revisar e remover</button>
+  </div>`:''})()}
   <div style="display:flex;justify-content:flex-end;padding:10px 20px 0">
     <button class="btn-pdf" onclick="printMensal()">📄 Gerar PDF do Mês</button>
   </div>
@@ -2561,6 +2581,62 @@ function addLog(action, detail, undoable=false, snapshotBefore=null){
   // Update logs tab badge if visible
   const nb = document.getElementById('nb-logs');
   if(nb) nb.setAttribute('data-count', logs.length);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// DUPLICADOS DE IMPORTAÇÃO
+// Regra conservadora: só mexe num bloco (mês + origem) quando ele inteiro está repetido
+// o mesmo nº de vezes (ex.: todos os lançamentos da Consumer de janeiro aparecem 2x).
+// Lançamentos iguais "soltos" num bloco normal (ex.: dois mensalistas com mesmo valor
+// no mesmo dia) não são tocados.
+// ═══════════════════════════════════════════════════════════════════
+function findImportDuplicates(year){
+  const gcd=(a,b)=>b?gcd(b,a%b):a;
+  const blocks={};
+  allTxns.filter(t=>t.year===year).forEach(t=>{
+    const bk=t.month+'|'+(t.source||'');
+    const key=[t.date,t.desc,Math.round((t.value||0)*100),t.type].join('|');
+    ((blocks[bk]=blocks[bk]||{})[key]=blocks[bk][key]||[]).push(t);
+  });
+  const extras=[], summary=[];
+  Object.entries(blocks).forEach(([bk,groups])=>{
+    const lists=Object.values(groups);
+    const g=lists.reduce((acc,l)=>gcd(acc,l.length),0);
+    if(g<2) return;
+    let removed=0;
+    lists.forEach(l=>{
+      // mantém primeiro os que têm categoria, depois os mais antigos (id menor)
+      const sorted=[...l].sort((a,b)=>(!!b.category-!!a.category)||String(a.id).localeCompare(String(b.id)));
+      const keep=l.length/g;
+      sorted.slice(keep).forEach(t=>{extras.push(t);removed++;});
+    });
+    const [m,src]=bk.split('|');
+    summary.push({month:+m,source:src,removed,times:g});
+  });
+  summary.sort((a,b)=>a.month-b.month||a.source.localeCompare(b.source));
+  return {extras,summary};
+}
+
+function reviewDuplicates(){
+  const {extras,summary}=findImportDuplicates(currentYear);
+  if(extras.length===0){ showToast('Nenhuma importação duplicada encontrada em '+currentYear+'.'); return; }
+  const lines=summary.map(s=>`• ${MESES_FULL[s.month]} — ${s.source||'(sem origem)'}: ${s.removed} cópias (importado ${s.times}x)`).join('\n');
+  openConfirm(
+    `Remover ${extras.length} lançamentos duplicados de ${currentYear}?`,
+    `Estes blocos foram importados mais de uma vez; fica 1 cópia de cada lançamento:\n\n${lines}\n\nDá para desfazer pela aba Logs.`,
+    async ()=>{
+      const snapshot=JSON.stringify(allTxns);
+      const ids=new Set(extras.map(t=>String(t.id)));
+      allTxns=allTxns.filter(t=>!ids.has(String(t.id)));
+      lsSave();
+      addLog('DUPLICADOS', `${extras.length} lançamentos duplicados removidos (${currentYear})`, true, snapshot);
+      const idList=[...ids];
+      let ok=true;
+      for(let i=0;i<idList.length&&ok;i+=300) ok=await gasMergeTxns(currentYear,[],idList.slice(i,i+300));
+      showToast(ok?`✓ ${extras.length} duplicados removidos`:'Removido neste dispositivo, mas o envio ao banco falhou — tente Sync.', !ok);
+      renderNav(); renderMain();
+    }
+  );
 }
 
 function undoLast(){

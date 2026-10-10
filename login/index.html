@@ -54,15 +54,24 @@ html,body{background:var(--bg);color:var(--text);font-family:'Monument Extended'
 .btn-logout svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 
 /* MONTH NAV */
-.monthnav{display:flex;align-items:center;gap:0;border-bottom:1px solid var(--border);padding:0 20px;background:var(--surf);overflow-x:auto;justify-content:space-between}
-.mnav-left{display:flex;gap:0}
-.mnav-btn{padding:14px 18px;font-size:13px;font-weight:700;letter-spacing:1.5px;font-family:'Monument Extended',sans-serif;cursor:pointer;border:none;background:none;color:var(--muted);border-bottom:2px solid transparent;white-space:nowrap;transition:all .15s;position:relative;display:flex;align-items:center;gap:4px}
-.mnav-btn:hover{color:#aaa}
-.mnav-btn.active{color:var(--orange);border-bottom-color:var(--orange);background:var(--orange-bg)}
-.mnav-btn .dot{width:5px;height:5px;border-radius:50%;background:var(--green);flex-shrink:0}
+/* Desktop: barra lateral vertical fixa à esquerda */
+.app-body{display:flex;align-items:flex-start}
+.app-body>.main{flex:1;min-width:0}
+.monthnav{position:sticky;top:62px;width:180px;flex-shrink:0;height:calc(100vh - 62px);overflow-y:auto;display:flex;flex-direction:column;justify-content:space-between;gap:12px;border-right:1px solid var(--border);background:var(--surf);padding:16px 0 14px}
+.mnav-title{font-size:10px;font-weight:700;letter-spacing:2px;color:var(--muted);font-family:'Monument Extended',sans-serif;padding:0 18px 10px}
+.mnav-left{display:flex;flex-direction:column;gap:0}
+.mnav-btn{width:100%;padding:9px 16px 9px 15px;font-size:13px;font-weight:700;letter-spacing:1.5px;font-family:'Monument Extended',sans-serif;cursor:pointer;border:none;border-left:3px solid transparent;background:none;color:var(--muted);text-align:left;white-space:nowrap;transition:all .15s;display:flex;flex-direction:column;gap:3px}
+.mnav-btn:hover{color:#bbb;background:var(--surf2)}
+.mnav-btn.active{color:var(--orange);border-left-color:var(--orange);background:var(--orange-bg)}
+.mnav-row{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%}
+.mnav-res{font-size:11px;font-weight:400;letter-spacing:.5px}
+.mnav-res.pos{color:var(--green)}
+.mnav-res.neg{color:var(--red)}
+.mnav-btn .cnt{font-size:10px;color:var(--muted);font-weight:400;letter-spacing:.5px}
+.mnav-btn .dot{display:none;width:5px;height:5px;border-radius:50%;background:var(--green);flex-shrink:0}
 .mnav-btn .dot.neg{background:var(--red)}
-.mnav-btn .cnt{font-size:13px;color:var(--muted);font-weight:400}
-.mnav-right{display:flex;align-items:center;gap:8px;padding:6px 0}
+.mnav-right{display:flex;align-items:center;padding:0 14px}
+.mnav-right .btn-danger-sm{width:100%;justify-content:center;white-space:normal;text-align:center}
 .btn-danger-sm{display:flex;align-items:center;gap:4px;background:none;border:1px solid rgba(255,68,68,.3);color:var(--red);padding:4px 10px;border-radius:4px;font-size:12px;font-weight:700;letter-spacing:1px;font-family:'Monument Extended',sans-serif;cursor:pointer;transition:all .15s;white-space:nowrap}
 .btn-danger-sm:hover{background:var(--red-bg)}
 .btn-danger-sm svg{width:11px;height:11px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
@@ -72,7 +81,7 @@ html,body{background:var(--bg);color:var(--text);font-family:'Monument Extended'
 
 /* KPI STRIP */
 .kpi-strip{display:grid;grid-template-columns:repeat(8,1fr);border-bottom:1px solid var(--border)}
-@media(max-width:900px){.kpi-strip{grid-template-columns:repeat(4,1fr)}}
+@media(max-width:1180px){.kpi-strip{grid-template-columns:repeat(4,1fr)}} /* 1180 = 900 + largura da barra lateral de meses */
 @media(max-width:500px){.kpi-strip{grid-template-columns:repeat(2,1fr)}}
 .kpi{padding:22px 20px;border-right:1px solid var(--border);display:flex;flex-direction:column;justify-content:flex-end}
 .kpi:last-child{border-right:none}
@@ -260,8 +269,7 @@ th button svg{width:9px;height:9px;stroke:currentColor;fill:none;stroke-width:2}
   .kpi-sub{font-size:11px}
 
   /* Mês: botões maiores p/ tocar com o dedo */
-  .month-nav{overflow-x:auto;-webkit-overflow-scrolling:touch}
-  .mnav-left{flex-wrap:nowrap}
+  /* (layout horizontal do mês no celular fica na regra ≤760px abaixo) */
   .mnav-btn{padding:12px 14px;font-size:13px}
 
   /* Conteúdo das abas: menos padding */
@@ -315,6 +323,22 @@ th button svg{width:9px;height:9px;stroke:currentColor;fill:none;stroke-width:2}
 @media(max-width:600px){
   #fabLancar{display:flex}
   #btnExport{order:3}
+}
+
+/* Telas estreitas (celular/tablet em pé): meses voltam a ser uma faixa horizontal rolável */
+@media(max-width:760px){
+  .app-body{display:block}
+  .monthnav{position:static;width:auto;height:auto;flex-direction:row;align-items:center;gap:8px;border-right:none;border-bottom:1px solid var(--border);padding:0 10px;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch}
+  .mnav-title{display:none}
+  .mnav-left{flex-direction:row;flex-wrap:nowrap}
+  .mnav-btn{width:auto;flex-direction:row;align-items:center;gap:4px;padding:12px 12px;border-left:none;border-bottom:2px solid transparent}
+  .mnav-btn.active{border-bottom-color:var(--orange)}
+  .mnav-row{width:auto;gap:4px}
+  .mnav-res{display:none}
+  .mnav-btn .dot{display:inline-block}
+  .mnav-btn .cnt-l{display:none}
+  .mnav-right{padding:6px 0}
+  .mnav-right .btn-danger-sm{width:auto;white-space:nowrap}
 }
 
 /* ═══════════════════ RELATÓRIOS PDF (via impressão do navegador) ═══════════════════ */
@@ -429,11 +453,13 @@ window.b12Check = async function(){
   </button>
 </div>
 
-<!-- MONTH NAV -->
-<div class="monthnav" id="monthNav"></div>
+<div class="app-body">
+  <!-- MONTH NAV (barra lateral no desktop, faixa horizontal no celular) -->
+  <aside class="monthnav" id="monthNav"></aside>
 
-<!-- MAIN -->
-<div class="main" id="mainContent"></div>
+  <!-- MAIN -->
+  <div class="main" id="mainContent"></div>
+</div>
 
 <!-- ÁREA DE IMPRESSÃO (usada apenas ao gerar PDF, invisível na tela) -->
 <div id="printArea"></div>
@@ -841,14 +867,24 @@ function renderNav(){
   const nav=document.getElementById('monthNav');
   const annSums=MESES_SHORT.map((_,i)=>computeSummary(txnsForMonth(i)));
   const hasM=MESES_SHORT.map((_,i)=>txnsForMonth(i).length>0);
-  nav.innerHTML=`<div class="mnav-left">
+  nav.innerHTML=`<div>
+  <div class="mnav-title">MESES ${currentYear}</div>
+  <div class="mnav-left">
     ${MESES_SHORT.map((m,i)=>{
       const has=hasM[i], s=annSums[i];
-      const dotCls=s.lucro<0?'dot neg':'dot';
-      return `<button class="mnav-btn${i===selMonth?' active':''}" onclick="selMonth=${i};renderNav();renderMain()">
-        ${m}${has?`<span class="${dotCls}"></span><span class="cnt">(${txnsForMonth(i).length})</span>`:''}
+      const neg=s.lucro<0;
+      const n=txnsForMonth(i).length;
+      // Resultado do mês em milhares (mesma regra do gráfico "Visão Anual")
+      const res=(s.lucro>0?'+':'')+Math.round(s.lucro/1000)+'k';
+      return `<button class="mnav-btn${i===selMonth?' active':''}" onclick="selMonth=${i};renderNav();renderMain()" title="${MESES_FULL[i]}${has?` — ${n} lançamento${n===1?'':'s'}`:''}">
+        <span class="mnav-row">
+          <span>${m}${has?`<span class="${neg?'dot neg':'dot'}"></span>`:''}</span>
+          ${has?`<span class="mnav-res ${neg?'neg':'pos'}">${res}</span>`:''}
+        </span>
+        ${has?`<span class="cnt">${n}<span class="cnt-l"> lanç.</span></span>`:''}
       </button>`;
     }).join('')}
+  </div>
   </div>
   <div class="mnav-right">
     <button class="btn-danger-sm" onclick="clearMonthConfirm()">

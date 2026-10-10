@@ -36,7 +36,15 @@
 html,body{background:var(--bg);color:var(--text);font-family:'Monument Extended',sans-serif;font-weight:400;font-size:15px;min-height:100vh}
 
 /* TOPBAR */
-.topbar{position:sticky;top:0;z-index:100;background:rgba(10,10,10,.95);backdrop-filter:blur(12px);border-bottom:2px solid var(--orange);display:flex;align-items:center;gap:0;padding:0 20px;height:62px}
+.topbar{position:sticky;top:0;z-index:100;background:rgba(10,10,10,.95);backdrop-filter:blur(12px);border-bottom:2px solid var(--orange);display:flex;flex-wrap:wrap;align-items:center;gap:6px 0;padding:8px 20px;min-height:62px}
+/* Telas médias: botões do topo ficam mais compactos antes de precisar quebrar linha */
+@media(max-width:1380px){.topbar .nav-btn{padding:6px 8px;font-size:12px}}
+/* Ainda menor: logo + ano/Excel/Sync/Sair na 1ª linha, abas de navegação inteiras na 2ª linha */
+@media(min-width:601px) and (max-width:1300px){
+  .topbar::before{content:'';order:4;flex-basis:100%;height:0}
+  .topbar .nav-btn{order:5}
+  .topbar{padding-bottom:6px}
+}
 .brand-block{display:flex;flex-direction:column;justify-content:center;margin-right:auto}
 .logo{height:20px;width:auto;display:block}
 .topbar-sub{color:var(--muted);font-size:9px;letter-spacing:1.5px;margin-top:2px}
@@ -57,7 +65,7 @@ html,body{background:var(--bg);color:var(--text);font-family:'Monument Extended'
 /* Desktop: barra lateral vertical fixa à esquerda */
 .app-body{display:flex;align-items:flex-start}
 .app-body>.main{flex:1;min-width:0}
-.monthnav{position:sticky;top:62px;width:180px;flex-shrink:0;height:calc(100vh - 62px);overflow-y:auto;display:flex;flex-direction:column;justify-content:space-between;gap:12px;border-right:1px solid var(--border);background:var(--surf);padding:16px 0 14px}
+.monthnav{position:sticky;top:var(--topbar-h,62px);width:180px;flex-shrink:0;height:calc(100vh - var(--topbar-h,62px));overflow-y:auto;display:flex;flex-direction:column;justify-content:space-between;gap:12px;border-right:1px solid var(--border);background:var(--surf);padding:16px 0 14px}
 .mnav-title{font-size:10px;font-weight:700;letter-spacing:2px;color:var(--muted);font-family:'Monument Extended',sans-serif;padding:0 18px 10px}
 .mnav-left{display:flex;flex-direction:column;gap:0}
 .mnav-btn{width:100%;padding:9px 16px 9px 15px;font-size:13px;font-weight:700;letter-spacing:1.5px;font-family:'Monument Extended',sans-serif;cursor:pointer;border:none;border-left:3px solid transparent;background:none;color:var(--muted);text-align:left;white-space:nowrap;transition:all .15s;display:flex;flex-direction:column;gap:3px}
@@ -71,29 +79,50 @@ html,body{background:var(--bg);color:var(--text);font-family:'Monument Extended'
 .mnav-btn .dot{display:none;width:5px;height:5px;border-radius:50%;background:var(--green);flex-shrink:0}
 .mnav-btn .dot.neg{background:var(--red)}
 .mnav-right{display:flex;align-items:center;padding:0 14px}
-.mnav-right .btn-danger-sm{width:100%;justify-content:center;white-space:normal;text-align:center}
+.mnav-right .btn-danger-sm{width:100%;justify-content:center}
 .btn-danger-sm{display:flex;align-items:center;gap:4px;background:none;border:1px solid rgba(255,68,68,.3);color:var(--red);padding:4px 10px;border-radius:4px;font-size:12px;font-weight:700;letter-spacing:1px;font-family:'Monument Extended',sans-serif;cursor:pointer;transition:all .15s;white-space:nowrap}
 .btn-danger-sm:hover{background:var(--red-bg)}
 .btn-danger-sm svg{width:11px;height:11px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 
 /* MAIN */
-.main{padding:0;max-width:100%}
+/* .main é um "container": os blocos abaixo se ajustam ao espaço REAL disponível
+   (tela menos a barra lateral), não à largura da janela — assim nada é cortado. */
+.main{padding:0;max-width:100%;container-type:inline-size;container-name:main}
 
-/* KPI STRIP */
-.kpi-strip{display:grid;grid-template-columns:repeat(8,1fr);border-bottom:1px solid var(--border)}
-@media(max-width:1180px){.kpi-strip{grid-template-columns:repeat(4,1fr)}} /* 1180 = 900 + largura da barra lateral de meses */
-@media(max-width:500px){.kpi-strip{grid-template-columns:repeat(2,1fr)}}
-.kpi{padding:22px 20px;border-right:1px solid var(--border);display:flex;flex-direction:column;justify-content:flex-end}
-.kpi:last-child{border-right:none}
+/* KPI STRIP — 2 colunas (estreito) → 4 colunas → 8 colunas (telas muito largas).
+   As linhas divisórias vêm do gap de 1px sobre o fundo cinza, então ficam certas em qualquer nº de colunas. */
+.kpi-strip{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1px;background:var(--border);border-bottom:1px solid var(--border)}
+.kpi{padding:22px 20px;background:var(--bg);min-width:0;display:flex;flex-direction:column;justify-content:flex-end}
 .kpi-label{font-size:11px;letter-spacing:2px;color:var(--muted);margin-bottom:8px;font-family:'Monument Extended',sans-serif;font-weight:400}
-.kpi-val{font-size:22px;font-weight:900;font-family:'Monument Extended',sans-serif;letter-spacing:-0.3px;line-height:1}
+/* Fonte do valor encolhe junto com a coluna (cqi = 1% da largura do container) */
+.kpi-val{font-size:clamp(14px,calc(5.2cqi - 4px),22px);white-space:nowrap;font-weight:900;font-family:'Monument Extended',sans-serif;letter-spacing:-0.3px;line-height:1}
+@container main (min-width:720px){
+  .kpi-strip{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .kpi-val{font-size:clamp(14px,calc(2.45cqi - 4px),24px)}
+}
+@container main (min-width:1900px){
+  .kpi-strip{grid-template-columns:repeat(8,minmax(0,1fr))}
+  .kpi-val{font-size:clamp(14px,calc(1.12cqi - 3px),24px)}
+}
 .kpi-val.g{color:var(--green)}.kpi-val.r{color:var(--red)}.kpi-val.o{color:var(--orange)}.kpi-val.b{color:var(--blue)}.kpi-val.w{color:#fff}.kpi-val.y{color:var(--yellow)}
 .kpi-sub{font-size:12px;color:var(--muted2);margin-top:6px}
 
 /* CHARTS GRID */
 .charts-grid{display:grid;grid-template-columns:1fr 1fr;border-bottom:1px solid var(--border)}
 @media(max-width:700px){.charts-grid{grid-template-columns:1fr}}
-.chart-panel{padding:32px 32px;border-right:1px solid var(--border)}
+.charts-grid>*{min-width:0}
+/* Espaço estreito: Receitas e Despesas ficam uma embaixo da outra */
+@container main (max-width:960px){
+  .charts-grid{grid-template-columns:1fr}
+  .charts-grid>.chart-panel{border-right:none;border-bottom:1px solid var(--border)}
+  .charts-grid>.chart-panel:last-child{border-bottom:none}
+}
+.chart-panel{padding:32px 32px;border-right:1px solid var(--border);container-type:inline-size}
+/* Painel estreito: legenda desce para baixo do donut em vez de vazar para fora */
+@container (max-width:600px){
+  .donut-wrap{flex-direction:column;align-items:center;gap:18px}
+  .donut-wrap .legend{width:100%}
+}
 .chart-panel:last-child,.charts-grid > .chart-panel:nth-child(2){border-right:none}
 .panel-hdr{display:flex;align-items:center;gap:7px;margin-bottom:20px}
 .panel-hdr-icon{color:var(--orange);font-size:13px}
@@ -104,11 +133,24 @@ html,body{background:var(--bg);color:var(--text);font-family:'Monument Extended'
 .ldot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
 .lname{color:var(--muted);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px}
 .lval{font-weight:400;font-family:'Monument Extended',sans-serif;font-size:16px;color:#fff;flex-shrink:0;min-width:120px;text-align:right}
+/* Painel bem estreito (celular): legenda um pouco menor para os nomes caberem */
+@container (max-width:420px){
+  .lname{font-size:12px}
+  .lval{font-size:13px;min-width:0}
+}
 
 /* ANNUAL */
 .annual-section{border-bottom:1px solid var(--border);padding:28px 28px}
 .annual-bars{display:flex;align-items:flex-end;height:120px;gap:0;margin-top:16px}
-.annual-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px}
+.annual-col{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:4px}
+/* Pouco espaço (celular): barras e rótulos do gráfico anual encolhem para caber os 12 meses */
+@container main (max-width:560px){
+  .annual-section{padding:22px 12px}
+  .bar-in,.bar-out{width:7px}
+  .bar-pair{gap:2px}
+  .annual-col-label{font-size:8px;letter-spacing:0}
+  .annual-col-val{font-size:7px;letter-spacing:-.3px}
+}
 .bar-pair{display:flex;gap:3px;align-items:flex-end;height:105px}
 .bar-in,.bar-out{width:12px;border-radius:2px 2px 0 0;min-height:2px;transition:height .4s cubic-bezier(.4,0,.2,1)}
 .bar-in{background:var(--green)}.bar-out{background:var(--red)}
@@ -126,7 +168,7 @@ html,body{background:var(--bg);color:var(--text);font-family:'Monument Extended'
 /* ANALYTICS CHARTS */
 .analytics-section{border-top:1px solid var(--border);padding:28px 28px}
 .analytics-tabs{display:flex;gap:2px;margin-bottom:20px;border-bottom:1px solid var(--border);padding-bottom:0}
-.atab{padding:8px 18px;font-size:12px;font-weight:700;letter-spacing:1px;font-family:'Monument Extended',sans-serif;cursor:pointer;border:none;background:none;color:var(--muted);border-bottom:2px solid transparent;transition:all .15s}
+.atab{flex:0 1 auto;min-width:0;padding:8px clamp(8px,2.5cqi,18px);font-size:12px;font-weight:700;letter-spacing:1px;font-family:'Monument Extended',sans-serif;cursor:pointer;border:none;background:none;color:var(--muted);border-bottom:2px solid transparent;transition:all .15s}
 .atab:hover{color:var(--text)}
 .atab.active{color:var(--orange);border-bottom-color:var(--orange)}
 .analytics-controls{display:flex;align-items:center;gap:10px;margin-bottom:18px;flex-wrap:wrap}
@@ -188,7 +230,10 @@ tr:hover td{background:var(--surf2)}
 .src-chip{display:flex;align-items:center;gap:4px;padding:4px 10px;border:1px solid rgba(255,68,68,.3);color:var(--red);border-radius:4px;font-size:12px;font-weight:700;font-family:'Monument Extended',sans-serif;cursor:pointer;transition:all .15s;background:none}
 .src-chip:hover{background:var(--red-bg)}
 .src-chip svg{width:10px;height:10px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-.lnc-totals{display:flex;gap:14px;font-family:'Monument Extended',sans-serif;font-weight:800;font-size:15px}
+.lnc-totals{display:flex;flex-wrap:wrap;gap:6px 14px;font-family:'Monument Extended',sans-serif;font-weight:800;font-size:15px}
+/* Fornecedores: formulário de adicionar (3 colunas; empilha quando estreito) */
+.forn-add{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;gap:10px;align-items:end;margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--border)}
+@container main (max-width:560px){.forn-add{grid-template-columns:minmax(0,1fr)}}
 th button{background:none;border:none;color:inherit;cursor:pointer;display:inline-flex;align-items:center;gap:3px;font-size:11px;letter-spacing:1.5px;font-family:'Monument Extended',sans-serif;font-weight:700}
 th button svg{width:9px;height:9px;stroke:currentColor;fill:none;stroke-width:2}
 
@@ -251,7 +296,7 @@ th button svg{width:9px;height:9px;stroke:currentColor;fill:none;stroke-width:2}
   }
   .brand-block{order:1}
   .topbar-sub{display:none}
-  .year-sel{order:2;font-size:12px;padding:6px 4px 6px 8px;margin-left:auto;width:60px}
+  .year-sel{order:2;font-size:12px;padding:6px 4px 6px 8px;margin-left:auto;width:82px}
   .btn-sync{order:3;font-size:11px;padding:6px 9px;margin-left:0}
   .btn-logout{display:flex;order:3}
   /* Navegação: botões fluem em linhas, ocupando a largura disponível */
@@ -262,10 +307,8 @@ th button svg{width:9px;height:9px;stroke:currentColor;fill:none;stroke-width:2}
   .nav-btn svg{width:14px;height:14px;flex-shrink:0}
 
   /* KPIs: 2 colunas, mais ar */
-  .kpi-strip{grid-template-columns:repeat(2,1fr)!important}
-  .kpi{padding:16px 14px;border-right:1px solid var(--border);border-bottom:1px solid var(--border)}
+  .kpi{padding:16px 14px}
   .kpi-label{font-size:10px}
-  .kpi-val{font-size:19px}
   .kpi-sub{font-size:11px}
 
   /* Mês: botões maiores p/ tocar com o dedo */
@@ -460,6 +503,17 @@ window.b12Check = async function(){
   <!-- MAIN -->
   <div class="main" id="mainContent"></div>
 </div>
+<script>
+// A barra do topo pode quebrar em 2 linhas em telas menores; a barra lateral de meses
+// usa essa altura (--topbar-h) para grudar logo abaixo dela.
+(function(){
+  var tb=document.querySelector('.topbar');
+  if(!tb) return;
+  function upd(){ document.documentElement.style.setProperty('--topbar-h', tb.offsetHeight+'px'); }
+  upd();
+  if(window.ResizeObserver) new ResizeObserver(upd).observe(tb); else window.addEventListener('resize', upd);
+})();
+</script>
 
 <!-- ÁREA DE IMPRESSÃO (usada apenas ao gerar PDF, invisível na tela) -->
 <div id="printArea"></div>
@@ -887,9 +941,9 @@ function renderNav(){
   </div>
   </div>
   <div class="mnav-right">
-    <button class="btn-danger-sm" onclick="clearMonthConfirm()">
+    <button class="btn-danger-sm" onclick="clearMonthConfirm()" title="Apagar todos os lançamentos de ${MESES_FULL[selMonth]}">
       <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
-      Limpar ${MESES_FULL[selMonth]}
+      Limpar mês
     </button>
   </div>`;
 }
@@ -2323,7 +2377,7 @@ function renderFornecedores(){
     </p>
 
     <!-- ADICIONAR NOVO -->
-    <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:10px;align-items:end;margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--border)">
+    <div class="forn-add">
       <div class="form-group">
         <label>NOME / TRECHO DO FORNECEDOR</label>
         <input id="fn-nome" placeholder="Ex: DEQUECH" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()"/>

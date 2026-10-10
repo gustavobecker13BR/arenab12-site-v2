@@ -203,9 +203,14 @@ input:focus,select:focus{border-color:var(--orange)}
 .dropzone-text b{color:var(--orange)}
 
 /* PREVIEW TABLE */
-.preview-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:gap;gap:8px}
+.preview-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px}
 .preview-label{font-size:11px;letter-spacing:2px;color:var(--muted);font-family:'Monument Extended',sans-serif;font-weight:400}
 .preview-actions{display:flex;gap:8px}
+/* Tabela da pré-visualização: cada coluna do tamanho do seu conteúdo; a descrição ocupa o que sobra */
+.preview-tbl{width:100%;table-layout:auto}
+.preview-tbl .pv-nw{white-space:nowrap}
+.preview-tbl .pv-desc{width:100%;min-width:180px;word-break:break-word;line-height:1.4}
+.preview-tbl .pv-cat{min-width:250px}
 .tbl-wrap{overflow-x:auto;max-height:calc(100vh - 300px);overflow-y:auto}
 table{width:100%;border-collapse:collapse;font-size:13px}
 th{text-align:left;padding:11px 10px;font-size:11px;letter-spacing:1.5px;color:var(--muted);border-bottom:1px solid var(--border);font-family:'Monument Extended',sans-serif;font-weight:700;position:sticky;top:0;background:var(--surf);white-space:nowrap}
@@ -1344,26 +1349,18 @@ function renderPreview(){
       </div>`:''
     }
     <div class="tbl-wrap">
-      <table style="table-layout:fixed;width:100%">
-        <colgroup>
-          <col style="width:100px"/>
-          <col style="width:auto"/>
-          <col style="width:120px"/>
-          <col style="width:80px"/>
-          <col style="width:220px"/>
-          <col style="width:50px"/>
-        </colgroup>
+      <table class="preview-tbl">
         <thead><tr><th>DATA</th><th>DESCRIÇÃO</th><th>VALOR</th><th>TIPO</th><th>CATEGORIA</th><th>MÊS</th></tr></thead>
         <tbody>
           ${pendingTxns.map(t=>{
             const cat=pendingEditCats[t.id]!==undefined?pendingEditCats[t.id]:(t.category||'');
             const miss=!cat;
             return `<tr style="${miss?'background:var(--red-bg)':''}">
-              <td style="white-space:nowrap;color:var(--muted)">${t.date}</td>
-              <td style="word-break:break-word;line-height:1.4">${t.desc}</td>
-              <td class="${t.type==='entrada'?'val-pos':'val-neg'}" style="white-space:nowrap">${t.type==='entrada'?'+':'-'}${fmtFull(t.value)}</td>
-              <td><span class="badge ${NEUTRAL_CATS.includes(cat)?'badge-blue':(t.type==='entrada'?'badge-green':'badge-red')}">${NEUTRAL_CATS.includes(cat)?'MOVIMENTAÇÃO':(t.type==='entrada'?'RECEITA':'DESPESA')}</span></td>
-              <td>
+              <td class="pv-nw" style="color:var(--muted)">${t.date}</td>
+              <td class="pv-desc">${t.desc}</td>
+              <td class="pv-nw ${t.type==='entrada'?'val-pos':'val-neg'}">${t.type==='entrada'?'+':'-'}${fmtFull(t.value)}</td>
+              <td class="pv-nw"><span class="badge ${NEUTRAL_CATS.includes(cat)?'badge-blue':(t.type==='entrada'?'badge-green':'badge-red')}">${NEUTRAL_CATS.includes(cat)?'MOVIMENTAÇÃO':(t.type==='entrada'?'RECEITA':'DESPESA')}</span></td>
+              <td class="pv-cat">
                 <select style="width:100%;font-size:12px" onchange="pendingEditCats['${t.id}']=this.value">
                   <option value="">-- Sem categoria --</option>
                   <optgroup label="Receitas">${INCOME_CATS.map(c=>`<option value="${c}"${c===cat?' selected':''}>${c}</option>`).join('')}</optgroup>
@@ -1371,7 +1368,7 @@ function renderPreview(){
                   <optgroup label="Movimentações (neutras)">${NEUTRAL_CATS.map(c=>`<option value="${c}"${c===cat?' selected':''}>${c}</option>`).join('')}</optgroup>
                 </select>
               </td>
-              <td style="color:var(--muted)">${MESES_SHORT[t.month]}</td>
+              <td class="pv-nw" style="color:var(--muted)">${MESES_SHORT[t.month]}</td>
             </tr>`;
           }).join('')}
         </tbody>

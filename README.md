@@ -2,14 +2,6 @@
 
 Site institucional da Arena B12, em HTML/CSS/JS puro — sem framework, sem build step.
 
-## Status
-
-🚧 Em construção. Este repositório é o **substituto planejado** do site atual
-(hoje em Lovable → GitHub → Vercel), mas ainda **não está conectado ao domínio
-`arenab12.com.br`**. Enquanto isso, roda apenas na URL de preview do Vercel.
-
-A troca de DNS só acontece quando o site aqui estiver 100% aprovado.
-
 ## Estrutura
 
 ```

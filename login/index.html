@@ -604,18 +604,35 @@ const MESES_SHORT = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out'
 const MESES_FULL  = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 
 const INCOME_CATS = ['Locação Quadra 1','Locação Quadra 2','Locação Quadra Areia','Receita Bebidas','Receita Alimentos','Outras Receitas','Entrada de Caixa'];
-const EXPENSE_CATS = ['Retirada G','Retirada R','Pagamento de Contas','Reposição de Estoque','Investimentos','Outras Despesas','Manutenção Quadras','Serviços Terceiros','Contabilidade','Impostos e Taxas','Folha de Pagamento','Marketing'];
+const EXPENSE_CATS = ['Estoque','Despesas Fixas','Despesas Variáveis','Investimentos e Empréstimo','Retirada dos Sócios'];
 const NEUTRAL_CATS = ['Pix Interna','Aplicação Financeira'];
 const ALL_CATS = [...INCOME_CATS, ...EXPENSE_CATS];
-// Estoque nas DESPESAS virou uma categoria única (as receitas continuam separadas em Bebidas/Alimentos).
-// Lançamentos antigos com as categorias divididas são convertidos ao carregar e regravados no banco.
-const ESTOQUE_CAT = 'Reposição de Estoque';
+// SAÍDAS SIMPLIFICADAS em 5 blocos (as receitas continuam como estavam).
+// Lançamentos com as categorias antigas são convertidos ao carregar e regravados no banco (uma vez só).
+const ESTOQUE_CAT = 'Estoque';
 const LEGACY_CAT_MAP = {
-  'Reposição de Estoque - Bebidas': ESTOQUE_CAT,
-  'Reposição de Estoque - Alimentos': ESTOQUE_CAT,
-  'Reposição de Estoque - Outros': ESTOQUE_CAT,
+  'Reposição de Estoque': 'Estoque',
+  'Reposição de Estoque - Bebidas': 'Estoque',
+  'Reposição de Estoque - Alimentos': 'Estoque',
+  'Reposição de Estoque - Outros': 'Estoque',
+  'Pagamento de Contas': 'Despesas Fixas',
+  'Folha de Pagamento': 'Despesas Fixas',
+  'Contabilidade': 'Despesas Fixas',
+  'Outras Despesas': 'Despesas Variáveis',
+  'Manutenção Quadras': 'Despesas Variáveis',
+  'Serviços Terceiros': 'Despesas Variáveis',
+  'Impostos e Taxas': 'Despesas Variáveis',
+  'Marketing': 'Despesas Variáveis',
+  'Investimentos': 'Investimentos e Empréstimo',
+  'Retirada G': 'Retirada dos Sócios',
+  'Retirada R': 'Retirada dos Sócios',
 };
-function normCat(c){ return (c && LEGACY_CAT_MAP[c]) || c; }
+// desc (opcional): correções pontuais que dependem da descrição
+function normCat(c, desc){
+  // Pagamento final da energia solar estava como "Aplicação Financeira" (neutro), mas é dinheiro que saiu
+  if(c==='Aplicação Financeira' && desc && /SOLTURI/i.test(desc)) return 'Investimentos e Empréstimo';
+  return (c && LEGACY_CAT_MAP[c]) || c;
+}
 
 const CHART_COLORS = ['#FF620B','#4fc3f7','#00e676','#ffcc02','#f06292','#81c784','#4db6ac','#ff8a65','#ba68c8','#a1887f'];
 
@@ -686,7 +703,7 @@ function rowToTxn(r){
     desc: r.description,
     value: r.value,
     type: r.type,
-    category: normCat(r.category),
+    category: normCat(r.category, r.description),
     source: r.source,
     month: r.month,
     year: r.year,
@@ -783,14 +800,14 @@ async function loadTxnsFromSupabase(){
     lsSave();
     // Migração única: regrava no banco os lançamentos que ainda estavam com categoria antiga
     // (ex.: "Reposição de Estoque - Bebidas" → "Reposição de Estoque"). Nas próximas cargas não sobra nada.
-    const legacyIds = new Set((data||[]).filter(r=>r.category && LEGACY_CAT_MAP[r.category]).map(r=>String(r.id)));
+    const legacyIds = new Set((data||[]).filter(r=>r.category && normCat(r.category, r.description)!==r.category).map(r=>String(r.id)));
     if(legacyIds.size>0){
       const toFix = allTxns.filter(t=>legacyIds.has(String(t.id)));
       (async()=>{
         let ok = true;
         for(let i=0; i<toFix.length && ok; i+=400) ok = await gasWrite(toFix.slice(i,i+400));
-        if(ok) addLog('MIGRAÇÃO', `${toFix.length} lançamentos de estoque unificados em "${ESTOQUE_CAT}"`, false);
-        else console.warn('Migração de categorias de estoque falhou — será tentada de novo na próxima carga.');
+        if(ok) addLog('MIGRAÇÃO', `${toFix.length} lançamentos convertidos para os 5 blocos de saída`, false);
+        else console.warn('Migração de categorias falhou — será tentada de novo na próxima carga.');
       })();
     }
     return true;
@@ -829,7 +846,7 @@ function lsSaveAndSync(affectedYear, affectedMonth){
 function lsLoad(){
   try{
     const d=localStorage.getItem(lsKey());
-    if(d){ allTxns=JSON.parse(d); allTxns.forEach(t=>{ t.category=normCat(t.category); }); }
+    if(d){ allTxns=JSON.parse(d); allTxns.forEach(t=>{ t.category=normCat(t.category, t.desc); }); }
     else {
       // migrate old per-year keys
       let migrated=[];
@@ -853,7 +870,7 @@ function computeSummary(txns){
   EXPENSE_CATS.forEach(c=>expense[c]=0);
   let totalIn=0, totalOut=0;
   txns.forEach(t=>{
-    const v=t.value||0, c=normCat(t.category)||'';
+    const v=t.value||0, c=normCat(t.category, t.desc)||'';
     if(t.type==='entrada'&&!NEUTRAL_CATS.includes(c)){
       income[c]=(income[c]||0)+v; totalIn+=v;
     } else if(t.type==='saida'&&!NEUTRAL_CATS.includes(c)){
@@ -1028,13 +1045,13 @@ function renderDash(){
   const uncatN=monthTxns.filter(t=>!t.category).length;
 
   const kpis=[
-    {l:'RECEITA TOTAL',v:fmtK(s.totalIn),c:'g'},
-    {l:'DESPESAS',v:fmtK(s.totalOut),c:'r'},
-    {l:'RESULTADO',v:(s.lucro>=0?'':'-')+fmtK(Math.abs(s.lucro)),c:lucroColor},
+    {l:'ENTROU',v:fmtK(s.totalIn),c:'g'},
+    {l:'SAIU',v:fmtK(s.totalOut),c:'r'},
+    {l:'SOBROU',v:(s.lucro>=0?'':'-')+fmtK(Math.abs(s.lucro)),c:lucroColor},
     {l:'BAR',v:fmtK(s.bar),c:'o'},
     {l:'QUADRAS',v:s.quadra>0?fmtK(s.quadra):'—',c:'b'},
     {l:'MARGEM BRUTA',v:s.totalIn>0?fmtPct(s.mb):'—',c:mbColor},
-    {l:'MARGEM LÍQUIDA',v:s.totalIn>0?fmtPct(s.ml):'—',c:mlColor},
+    {l:'SOBRA / ENTROU',v:s.totalIn>0?fmtPct(s.ml):'—',c:mlColor},
     {l:'BAR / QUADRA',v:s.quadra>0?s.coefBarLoc.toFixed(2)+'x':'—',c:'w'},
   ];
 
@@ -1054,14 +1071,14 @@ function renderDash(){
   </div>
   <div class="charts-grid">
     <div class="chart-panel">
-      <div class="panel-hdr"><span class="panel-hdr-icon">◎</span><span class="panel-hdr-title">RECEITAS — ${mes}</span></div>
+      <div class="panel-hdr"><span class="panel-hdr-icon">◎</span><span class="panel-hdr-title">ENTRADAS — ${mes}</span></div>
       <div class="donut-wrap">
         <canvas id="chartRec" width="180" height="180" style="flex-shrink:0" role="img" aria-label="Donut receitas"></canvas>
         <div class="legend" id="legendRec"></div>
       </div>
     </div>
     <div class="chart-panel">
-      <div class="panel-hdr"><span class="panel-hdr-icon">◎</span><span class="panel-hdr-title">DESPESAS — ${mes}</span></div>
+      <div class="panel-hdr"><span class="panel-hdr-icon">◎</span><span class="panel-hdr-title">SAÍDAS — ${mes}</span></div>
       <div class="donut-wrap">
         <canvas id="chartExp" width="180" height="180" style="flex-shrink:0" role="img" aria-label="Donut despesas"></canvas>
         <div class="legend" id="legendExp"></div>
@@ -1090,8 +1107,8 @@ function renderDash(){
   <div class="insights-strip">
     ${s.coefEstoqueBar>0?`<div class="insight">Custo estoque / Bar: <b class="${s.coefEstoqueBar>0.7?'r':'g'}">${fmtPct(s.coefEstoqueBar)}</b>${s.coefEstoqueBar>0.7?' ⚠':''}</div>`:'<div class="insight">—</div>'}
     <div class="insight">Bar vs Quadras: <b>${s.quadra>0?s.coefBarLoc.toFixed(2)+'x':'—'}</b></div>
-    <div class="insight">Folha / Receita: <b class="${s.expense['Folha de Pagamento']/s.totalIn>0.2?'r':'g'}">${s.expense['Folha de Pagamento']>0?fmtPct(s.expense['Folha de Pagamento']/s.totalIn):'—'}</b></div>
-    <div class="insight">Impostos / Receita: <b>${s.expense['Impostos e Taxas']>0?fmtPct(s.expense['Impostos e Taxas']/s.totalIn):'—'}</b></div>
+    <div class="insight">Despesas fixas / Entradas: <b class="${s.expense['Despesas Fixas']/s.totalIn>0.3?'r':'g'}">${s.expense['Despesas Fixas']>0?fmtPct(s.expense['Despesas Fixas']/s.totalIn):'—'}</b></div>
+    <div class="insight">Retirada dos sócios / Entradas: <b>${s.expense['Retirada dos Sócios']>0?fmtPct(s.expense['Retirada dos Sócios']/s.totalIn):'—'}</b></div>
   </div>`:''}
 
   <div class="analytics-section">
@@ -1508,8 +1525,8 @@ function parseInter(wb, mesIdx){
     if(!cat){
       if(dl.includes('aplicacao')||dl.includes('resgate')||APLIC_PATTERNS.some(p=>dl.includes(p))) cat='Aplicação Financeira';
       else if(PIX_PATTERNS.some(p=>dl.includes(p))) cat='Pix Interna';
-      else if(dl.includes('debito automatico')||dl.includes('pagamento efetuado')) cat='Pagamento de Contas';
-      else if(dl.includes('debito titulo')||dl.includes('boleto')) cat='Pagamento de Contas';
+      else if(dl.includes('debito automatico')||dl.includes('pagamento efetuado')) cat='Despesas Fixas';
+      else if(dl.includes('debito titulo')||dl.includes('boleto')) cat='Despesas Fixas';
       else if(dl.includes('compra no debito')) cat=categorizeDebito(dl);
       else if(dl.includes('pix enviado')) cat='';
       // sem categoria — usuário decide na pré-visualização
@@ -1545,7 +1562,7 @@ function parsePagSeguro(wb, mesIdx){
     // Categoriza pela descrição (fornecedores) ou tipo
     let cat = catFromFornecedor(desc);
     if(!cat){
-      if(tipo.includes('pagamento de conta')) cat='Pagamento de Contas';
+      if(tipo.includes('pagamento de conta')) cat='Despesas Fixas';
       // sem categoria — usuário decide na pré-visualização
     }
     return mkTxn(displayDt, desc, val, 'saida', cat, 'PagSeguro', mIdx);
@@ -1553,7 +1570,7 @@ function parsePagSeguro(wb, mesIdx){
 }
 
 function categorizeDebito(dl){
-  if(dl.includes('posto')||dl.includes('combus')) return 'Outras Despesas';
+  if(dl.includes('posto')||dl.includes('combus')) return 'Despesas Variáveis';
   return ESTOQUE_CAT;
 }
 
@@ -1570,7 +1587,7 @@ function catFromFornecedor(desc){
 }
 
 function mkTxn(date,desc,value,type,category,source,month,year){
-  return {id:nextId(),date:cleanDate(date),desc,value:Math.round(value*100)/100,type,category:normCat(category),source,month,year:year||currentYear};
+  return {id:nextId(),date:cleanDate(date),desc,value:Math.round(value*100)/100,type,category:normCat(category,desc),source,month,year:year||currentYear};
 }
 function pad(n){return String(n).padStart(2,'0')}
 function dtToDisplay(isoDate){
@@ -1912,7 +1929,7 @@ function toggleSort(k){
 // o backup Excel e o relatório PDF anual, para não divergirem entre si.
 function dreRowDefs(){
   return [
-    {l:'1. ENTRADAS',k:'totalIn',sec:true,c:'var(--green)'},
+    {l:'1. ENTROU',k:'totalIn',sec:true,c:'var(--green)'},
     {l:'1.1 Loc. Quadra 1',k:'income.Locação Quadra 1'},
     {l:'1.2 Loc. Quadra 2',k:'income.Locação Quadra 2'},
     {l:'1.3 Loc. Quadra Areia',k:'income.Locação Quadra Areia'},
@@ -1920,21 +1937,14 @@ function dreRowDefs(){
     {l:'1.5 Receita Alimentos',k:'income.Receita Alimentos'},
     {l:'1.6 Outras Receitas',k:'income.Outras Receitas'},
     {l:'1.7 Entrada de Caixa',k:'income.Entrada de Caixa'},
-    {l:'2. SAÍDAS',k:'totalOut',sec:true,c:'var(--red)'},
-    {l:'2.1 Retiradas G',k:'expense.Retirada G'},
-    {l:'2.2 Retiradas R',k:'expense.Retirada R'},
-    {l:'2.3 Pgto Contas',k:'expense.Pagamento de Contas'},
-    {l:'2.4 Estoque',k:'expense.Reposição de Estoque'},
-    {l:'2.5 Investimentos',k:'expense.Investimentos'},
-    {l:'2.6 Outras Despesas',k:'expense.Outras Despesas'},
-    {l:'2.7 Manutenção',k:'expense.Manutenção Quadras'},
-    {l:'2.8 Serv. Terceiros',k:'expense.Serviços Terceiros'},
-    {l:'2.9 Contabilidade',k:'expense.Contabilidade'},
-    {l:'2.10 Impostos',k:'expense.Impostos e Taxas'},
-    {l:'2.11 Folha',k:'expense.Folha de Pagamento'},
-    {l:'2.12 Marketing',k:'expense.Marketing'},
-    {l:'RESULTADO',k:'lucro',sec:true,c:'var(--orange)'},
-    {l:'Margem Líquida %',k:'ml',pct:true},
+    {l:'2. SAIU',k:'totalOut',sec:true,c:'var(--red)'},
+    {l:'2.1 Estoque',k:'expense.Estoque'},
+    {l:'2.2 Despesas Fixas',k:'expense.Despesas Fixas'},
+    {l:'2.3 Despesas Variáveis',k:'expense.Despesas Variáveis'},
+    {l:'2.4 Investimentos e Empréstimo',k:'expense.Investimentos e Empréstimo'},
+    {l:'2.5 Retirada dos Sócios',k:'expense.Retirada dos Sócios'},
+    {l:'SOBROU',k:'lucro',sec:true,c:'var(--orange)'},
+    {l:'Sobra / Entrou %',k:'ml',pct:true},
   ];
 }
 function dreGetV(s,k){
@@ -1979,10 +1989,10 @@ function renderAnual(){
               <td style="${row.sec?`font-weight:500;font-size:13px;${row.c?'color:'+row.c:''}`:''}">${row.l}</td>
               ${annSums.map(s=>{
                 const v=getV(s,row.k);
-                const disp=row.pct?fmtPct(v):(v!==0?(row.k==='lucro'&&v>0?'+':'')+fmtK(v).replace('R$\u00a0',''):'—');
+                const disp=row.pct?fmtPct(v):(v!==0?(row.k==='lucro'?(v>0?'+':'−'):'')+fmtK(v).replace('R$\u00a0',''):'—');
                 return `<td style="${cellColor(row,v)}">${disp}</td>`;
               }).join('')}
-              <td style="${cellColor(row,totalV)};font-weight:400;font-size:13px">${row.pct?fmtPct(totalV):(row.k==='lucro'&&totalV>0?'+':'')+fmtK(totalV).replace('R$\u00a0','')}</td>
+              <td style="${cellColor(row,totalV)};font-weight:400;font-size:13px">${row.pct?fmtPct(totalV):(row.k==='lucro'?(totalV>0?'+':totalV<0?'−':''):'')+fmtK(totalV).replace('R$\u00a0','')}</td>
             </tr>`;
           }).join('')}
         </tbody>
@@ -2068,10 +2078,10 @@ function printMensal(){
   const mesFull = MESES_FULL[selMonth];
 
   const kpis = [
-    {l:'RECEITA TOTAL', v:fmtK(s.totalIn), c:'g'},
-    {l:'DESPESAS', v:fmtK(s.totalOut), c:'r'},
-    {l:'RESULTADO', v:(s.lucro>=0?'':'-')+fmtK(Math.abs(s.lucro)), c:s.lucro>=0?'g':'r'},
-    {l:'MARGEM LÍQUIDA', v:s.totalIn>0?fmtPct(s.ml):'—', c:s.ml>=0?'g':'r'},
+    {l:'ENTROU', v:fmtK(s.totalIn), c:'g'},
+    {l:'SAIU', v:fmtK(s.totalOut), c:'r'},
+    {l:'SOBROU', v:(s.lucro>=0?'':'-')+fmtK(Math.abs(s.lucro)), c:s.lucro>=0?'g':'r'},
+    {l:'SOBRA / ENTROU', v:s.totalIn>0?fmtPct(s.ml):'—', c:s.ml>=0?'g':'r'},
   ];
 
   const receitasRows = INCOME_CATS.filter(c=>s.income[c]).map(c=>
@@ -2100,15 +2110,15 @@ function printMensal(){
     <div class="pr-kpis">
       ${kpis.map(k=>`<div class="pr-kpi"><div class="l">${k.l}</div><div class="v ${k.c}">${k.v}</div></div>`).join('')}
     </div>
-    <div class="pr-section-title">RECEITAS POR CATEGORIA</div>
+    <div class="pr-section-title">ENTRADAS</div>
     <table class="pr-table"><thead><tr><th>Categoria</th><th class="num">Valor</th></tr></thead>
       <tbody>${receitasRows||'<tr><td colspan="2">Sem receitas no período</td></tr>'}
-      <tr class="tot"><td>TOTAL ENTRADAS</td><td class="num">${fmtK(s.totalIn)}</td></tr></tbody>
+      <tr class="tot"><td>TOTAL QUE ENTROU</td><td class="num">${fmtK(s.totalIn)}</td></tr></tbody>
     </table>
-    <div class="pr-section-title">DESPESAS POR CATEGORIA</div>
+    <div class="pr-section-title">SAÍDAS</div>
     <table class="pr-table"><thead><tr><th>Categoria</th><th class="num">Valor</th></tr></thead>
       <tbody>${despesasRows||'<tr><td colspan="2">Sem despesas no período</td></tr>'}
-      <tr class="tot"><td>TOTAL SAÍDAS</td><td class="num">${fmtK(s.totalOut)}</td></tr></tbody>
+      <tr class="tot"><td>TOTAL QUE SAIU</td><td class="num">${fmtK(s.totalOut)}</td></tr></tbody>
     </table>
     <div class="pr-section-title">EXTRATO DO MÊS (${txns.length} lançamentos)</div>
     <table class="pr-table"><thead><tr><th>Data</th><th>Descrição</th><th>Categoria</th><th>Tipo</th><th>Origem</th><th class="num">Valor</th></tr></thead>
@@ -2396,7 +2406,7 @@ function loadFornecedores(){
     if(saved){
       fornecedores = JSON.parse(saved);
       // Converte fornecedores cadastrados com as categorias antigas de estoque
-      if(fornecedores.some(f=>LEGACY_CAT_MAP[f.cat])){
+      if(fornecedores.some(f=>normCat(f.cat)!==f.cat)){
         fornecedores.forEach(f=>{ f.cat = normCat(f.cat); });
         saveFornecedores();
       }
@@ -2406,7 +2416,7 @@ function loadFornecedores(){
 }
 
 function seedFornecedores(){
-  fornecedores = FORNECEDORES_SEED.map((f,i)=>({id:'seed_'+i, nome:f.nome, cat:f.cat}));
+  fornecedores = FORNECEDORES_SEED.map((f,i)=>({id:'seed_'+i, nome:f.nome, cat:normCat(f.cat)}));
   saveFornecedores();
 }
 
@@ -2829,7 +2839,7 @@ async function b12Start(){
   let _fixedCat = 0;
   allTxns = allTxns.map(t => {
     const dl = (t.desc||'').toLowerCase();
-    if(t.category === 'Outras Despesas' || t.category === 'Outras Receitas') {
+    if(t.category === 'Despesas Variáveis' || t.category === 'Outras Receitas') {
       if(PIX_PATTERNS.some(p => dl.includes(p))) {
         _fixedCat++;
         return {...t, category:'Pix Interna'};

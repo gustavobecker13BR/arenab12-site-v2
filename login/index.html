@@ -641,6 +641,7 @@ let dupCallback = {onContinue:null, onReplace:null};
 let chartRec=null, chartExp=null;
 let GAS_URL = 'supabase'; // sentinel sempre "ligado" — o backend real agora é o Supabase (ver funções gas* abaixo), mantido com esse nome só para não precisar editar todos os pontos que checam "if(GAS_URL)"
 let customMap = {};
+let pendingReplace = null; // {ids,label} — lançamentos a remover quando a importação for confirmada
 try{customMap=JSON.parse(localStorage.getItem('arenab12_customMap')||'{}'); Object.keys(customMap).forEach(k=>{customMap[k]=normCat(customMap[k]);});}catch(e){}
 
 // Sort state for lancamentos
@@ -1378,9 +1379,9 @@ function renderPreview(){
   const catOpts=ALL_CATS.map(c=>`<option value="${c}">${c}</option>`).join('');
   return `<div class="section-card">
     <div class="preview-hdr">
-      <div class="preview-label">PRÉ-VISUALIZAÇÃO — ${pendingTxns.length} LANÇAMENTOS DETECTADOS</div>
+      <div class="preview-label">PRÉ-VISUALIZAÇÃO — ${pendingTxns.length} LANÇAMENTOS DETECTADOS${pendingReplace?` · SUBSTITUI ${pendingReplace.ids.length} DE ${pendingReplace.label.toUpperCase()}`:''} · TOTAL ${fmtFull(pendingTxns.reduce((a,t)=>a+(t.type==='entrada'?t.value:-t.value),0))}</div>
       <div class="preview-actions">
-        <button class="btn-outline" onclick="pendingTxns=[];pendingEditCats={};renderMain()">Cancelar</button>
+        <button class="btn-outline" onclick="pendingTxns=[];pendingEditCats={};pendingReplace=null;renderMain()">Cancelar</button>
         <button class="btn-success" onclick="confirmImport()">✓ Confirmar</button>
       </div>
     </div>
@@ -1424,8 +1425,10 @@ function renderPreview(){
 function parseConsumer(wb, mesIdx){
   const ws=wb.Sheets[wb.SheetNames[0]];
   const rows=XLSX.utils.sheet_to_json(ws,{cellDates:true});
-  // Soma TODA a coluna "Valor. Tot. Item" (sem filtro de status nem de mês).
-  // Cada item vai para o dia/mês/ano da sua própria "Data Fec. Ped."; sem data → dia 1 do mês escolhido.
+  // Soma TODA a coluna "Valor. Tot. Item" (sem filtro de status — inclui pedidos "Em Aberto").
+  // Data do lançamento = ABERTURA do pedido ("Data Ab. Ped."). O relatório da Consumer separa os arquivos
+  // por data de abertura, então cada planilha cai inteira no seu próprio mês (nada se perde na virada
+  // e nada se mistura com o mês vizinho). Sem data de abertura → data do item → fechamento → dia 1 do mês.
   const toNum=v=>{
     if(typeof v==='number') return v;
     if(v===undefined||v===null||v==='') return 0;
@@ -1444,10 +1447,10 @@ function parseConsumer(wb, mesIdx){
   rows.forEach(r=>{
     const cat=String(r['Cat. Prod.']||'').trim().toUpperCase();
     // Linha de total/rodapé (sem categoria, status e data) não é item vendido — ignorada para não somar em dobro
-    if(!cat && !r['Stat. Ped.'] && !r['Data Fec. Ped.']) return;
+    if(!cat && !r['Stat. Ped.'] && !r['Data Fec. Ped.'] && !r['Data Ab. Ped.']) return;
     const v=toNum(r['Valor. Tot. Item']);
     if(!v) return;
-    const d=toDate(r['Data Fec. Ped.']);
+    const d=toDate(r['Data Ab. Ped.'])||toDate(r['Data/Hora Item'])||toDate(r['Data Fec. Ped.']);
     const key=(cat||'OUTROS')+'|'+(d?`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`:'');
     groups[key]=(groups[key]||0)+v;
   });
@@ -1693,19 +1696,19 @@ function handleFileInput(file){
         }
         msg += '<br><br>Importar novamente pode gerar dados duplicados. O que deseja fazer?';
         document.getElementById('dupMsg').innerHTML = msg;
-        dupCallback.onContinue=()=>{pendingTxns=txns;pendingEditCats={};closeDupModal();renderMain();showToast(`${txns.length} lançamentos detectados. Revise e confirme.`,'',true);};
+        dupCallback.onContinue=()=>{pendingTxns=txns;pendingEditCats={};pendingReplace=null;closeDupModal();renderMain();showToast(`${txns.length} lançamentos detectados. Revise e confirme.`,'',true);};
         dupCallback.onReplace=()=>{
-          const snapshot = JSON.stringify(allTxns);
-          allTxns=allTxns.filter(t=>!(t.source===srcLabel&&months.includes(t.month)&&(t.year===currentYear||!t.year)));
-          addLog('LIMPEZA', `Substituição: removidos lançamentos de ${srcLabel} em ${months.map(m=>MESES_FULL[m]).join(', ')}/${currentYear}`, true, snapshot);
+          // Não apaga nada ainda: guarda quais serão substituídos e só remove (na tela E no banco) ao Confirmar.
+          const old=allTxns.filter(t=>t.source===srcLabel&&months.includes(t.month)&&(t.year===currentYear||!t.year));
+          pendingReplace={ids:old.map(t=>String(t.id)), label:`${srcLabel} em ${months.map(m=>MESES_FULL[m]).join(', ')}/${currentYear}`};
           pendingTxns=txns;pendingEditCats={};closeDupModal();renderMain();
-          showToast(`Anteriores removidos. ${txns.length} novos prontos para importar.`,'',true);
+          showToast(`${old.length} lançamentos anteriores serão substituídos ao confirmar. Revise os ${txns.length} novos.`,'',true);
         };
         document.getElementById('dupContinueBtn').onclick=dupCallback.onContinue;
         document.getElementById('dupReplaceBtn').onclick=dupCallback.onReplace;
         document.getElementById('dupModal').classList.add('open');
       } else {
-        pendingTxns=txns;pendingEditCats={};renderMain();
+        pendingTxns=txns;pendingEditCats={};pendingReplace=null;renderMain();
         showToast(`${txns.length} lançamentos detectados. Revise e confirme.`,'',true);
       }
     }catch(err){showToast('Erro ao ler arquivo: '+err.message,true);}
@@ -1762,11 +1765,20 @@ async function confirmImport(){
   });
   const src = pendingTxns[0]?.source || 'Desconhecido';
   const months = [...new Set(pendingTxns.map(t=>MESES_FULL[t.month]))].join(', ');
+  const replaced = pendingReplace; pendingReplace = null;
+  if(replaced){
+    const del=new Set(replaced.ids);
+    allTxns=allTxns.filter(t=>!del.has(String(t.id)));
+  }
   allTxns=[...allTxns,...pendingTxns];
   customMap=newCustom;
   localStorage.setItem('arenab12_customMap',JSON.stringify(newCustom));
   lsSave();
-  addLog('IMPORTAÇÃO', `${pendingTxns.length} lançamentos de ${src} — ${months}/${currentYear}`, true, snapshot);
+  addLog('IMPORTAÇÃO', `${pendingTxns.length} lançamentos de ${src} — ${months}/${currentYear}${replaced?` (substituiu ${replaced.ids.length} anteriores)`:''}`, true, snapshot);
+  if(replaced && replaced.ids.length && GAS_URL){
+    // Apaga do banco os substituídos (antes isso só acontecia na tela e eles voltavam ao recarregar)
+    (async()=>{ for(let i=0;i<replaced.ids.length;i+=300) await gasMergeTxns(currentYear,[],replaced.ids.slice(i,i+300)); })();
+  }
   if(GAS_URL){
     // Merge: envia só os lançamentos importados (cada um com id único).
     // Não apaga o que outro dispositivo já colocou no mesmo mês.

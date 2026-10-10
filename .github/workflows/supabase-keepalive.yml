@@ -1,0 +1,18 @@
+name: Supabase keep-alive
+
+on:
+  schedule:
+    - cron: "0 12 */3 * *"
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Consulta leve no Supabase
+        run: |
+          status=$(curl -s -o /dev/null -w "%{http_code}" \
+            "https://zryazxwxrufzeyaoeqbm.supabase.co/rest/v1/txns?select=id&limit=1" \
+            -H "apikey: sb_publishable_Hux6NxPxXSMnb1gW5gDXzA_j5ja3bhN")
+          echo "HTTP $status"
+          if [ "$status" -ge 400 ]; then exit 1; fi
